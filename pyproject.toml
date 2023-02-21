@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "plotter"
+version = "0.1.0"
+description = ""
+authors = ["Joseph Bergeron <jophish126@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+py5 = "^0.8.3a1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
