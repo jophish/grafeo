@@ -81,7 +81,7 @@ def run_prog(gpgl):
     ser.write(fmt(":"))
     sleep(5)
     ser.write(fmt("M0, 0,"))
-    ser.write(fmt("J3"))
+    ser.write(fmt("J2"))
 
     for i in range(len(gpgl)):
         ser.write(fmt(gpgl[i]))
@@ -90,5 +90,3 @@ def run_prog(gpgl):
 def main():
     gpgl = read_gpgl('./sq-inkcut-1677037622.gpgl')
     run_prog(gpgl)
-
-main()
