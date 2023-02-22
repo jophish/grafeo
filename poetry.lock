@@ -2460,6 +2460,17 @@ pyobjc-core = ">=9.0.1"
 pyobjc-framework-Cocoa = ">=9.0.1"
 
 [[package]]
+name = "pyserial"
+version = "3.5"
+description = "Python Serial Port Extension"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+cp2110 = ["hidapi"]
+
+[[package]]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
@@ -2607,7 +2618,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "fa14a7080005725ee6e500101ca3ea2413d63c949d2d7fcb3dbf7500ea310d4f"
+content-hash = "e12c0c769a5b8decc7a433dfd8f23cc90435ae77c6a51162c0a41623d2a3222e"
 
 [metadata.files]
 appnope = [
@@ -3944,6 +3955,10 @@ pyobjc-framework-webkit = [
     {file = "pyobjc_framework_WebKit-9.0.1-cp36-abi3-macosx_10_9_universal2.whl", hash = "sha256:037082f72fa1f1d87889fdc172726c3381769de24ca5207d596f3925df9b25f0"},
     {file = "pyobjc_framework_WebKit-9.0.1-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:952685b820545036833ed737600d32c344916a83b2af4e04acb4b618aaac9431"},
     {file = "pyobjc_framework_WebKit-9.0.1-cp36-abi3-macosx_11_0_universal2.whl", hash = "sha256:28a7859401b5af7c47e17612b4b3baca6669e76f974f6f6bfe5e93921a00adec"},
+]
+pyserial = [
+    {file = "pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"},
+    {file = "pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
