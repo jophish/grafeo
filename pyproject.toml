@@ -6,9 +6,12 @@ authors = ["Joseph Bergeron <jophish126@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.12"
 py5 = "^0.8.3a1"
 pyserial = "^3.5"
+numpy = "^1.24.2"
+scipy = "^1.10.1"
+matplotlib = "^3.7.0"
 
 
 [build-system]

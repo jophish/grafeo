@@ -1,37 +1,53 @@
 from py5 import Sketch, Py5Vector
 from random import randint
 from main import run_prog
-
+from test import generate_line, sample_spline
+import math
 WIDTH = 16640
 HEIGHT = 10740
 
-SCALE = .06
+SCALE = .1
 
 class TestSketch(Sketch):
 
+    gpgl = ['H']
 
     def settings(self):
         self.size(round(WIDTH*SCALE), round(HEIGHT*SCALE))
 
     def setup(self):
-        s = self.make_line(HEIGHT-4500, 50)
-        curve = self.chaikin_open(s, .5, 5)
-        #curve = self.make_curve(HEIGHT-1000, 50, 2)
+        points = generate_line(500, WIDTH-2500, 1000, 50)
+        spline = sample_spline(points, 1000)
+        curve = self.make_line_from_vectors(spline)
         self.style_curve(curve)
-        gpgl = self.make_gpgl(curve)
-        self.shape(curve)
-        run_prog(gpgl)
+        for i in range(180):
+            curve.translate(0, 50 + randint(-20, 20) + 10*math.sin(i*(2*math.pi)/20))
+            self.make_gpgl(curve)
+            self.shape(curve)
 
     def draw(self):
         return
 
+
+    def make_line_from_vectors(self, vectors: list[Py5Vector]):
+        s = self.create_shape()
+        s.begin_shape()
+        for vector in vectors:
+            s.vertex(vector.x, vector.y)
+        s.end_shape()
+        return s
+
     def make_gpgl(self, curve):
         command = 'D'
+
         for i in range(curve.get_vertex_count()):
+            if i == 0:
+                self.gpgl.append(f'M{round(curve.get_vertex(i).x)},{round(curve.get_vertex(i).y)}')
+
             command += f'{round(curve.get_vertex(i).x)},{round(curve.get_vertex(i).y)}'
             if i != (curve.get_vertex_count() - 1):
                 command += ','
-        return ['H', command]
+        self.gpgl.append(command)
 
     def style_curve(self, curve):
         curve.set_fill(False)
@@ -124,6 +140,8 @@ class TestSketch(Sketch):
 
 def main():
     sketch = TestSketch()
-    sketch.run_sketch()
+    sketch.run_sketch(block=False)
+    input()
+    run_prog(sketch.gpgl)
 
 main()
