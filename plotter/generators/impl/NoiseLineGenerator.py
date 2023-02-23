@@ -2,34 +2,27 @@ from abc import ABC, abstractmethod
 from py5 import Py5Vector
 import random
 import math
-from test import generate_line, sample_spline
+from plotter.utils.splines import generate_line, sample_spline
+from ..Generator import Generator, GeneratorConfig, ParamList, ParamValues
+from ..Line import Line, Pen
 
-class LineGenerator(ABC):
+WIDTH = 16640
+HEIGHT = 10720
 
-    gpgl: list[str] = []
-    lines: list[Py5Vector] = []
+class NoiseLineGenerator(Generator):
 
-    @abstractmethod
-    def generate_lines(self):
-        ...
+    def __init__(self, config: GeneratorConfig):
+        super().__init__(config)
 
-    def generate_gpgl(self):
-        if len(self.gpgl):
-            return self.gpgl
+    def get_param_list(self) -> ParamList:
+        return {
+            'num_lines': ('nl', 'Number of lines to draw', int)
+        }
 
-        self.gpgl.append('H')
-        for line in self.lines:
-            for i in range(len(line)):
-                if i == 0:
-                    self.gpgl.append(f'M{round(line[i].x)},{round(line[i].y)}')
-                self.gpgl.append(f'D{round(line[i].x)},{round(line[i].y)}')
-
-        return self.gpgl
-
-class NoiseLineGenerator(LineGenerator):
-
-    WIDTH = 16640
-    HEIGHT = 10720
+    def get_default_params(self) -> ParamValues:
+        return {
+            'num_lines': 200
+        }
 
     def generate_lines(self):
         # Use margin of 1000 units
@@ -55,7 +48,7 @@ class NoiseLineGenerator(LineGenerator):
         # Generate unique lines
         points_per_line = 50
         unique_lines = [
-            generate_line(start_x, self.WIDTH - start_x*2, start_y, 50)
+            generate_line(start_x, self.config['width'] - start_x*2, start_y, 50)
             for i in range(num_unique_lines)
         ]
 
@@ -81,12 +74,13 @@ class NoiseLineGenerator(LineGenerator):
             line_map[i] = lerped_line
 
         # Now, we have all of our lines. Turn them into splines!
-        spline_map = {}
+        final_lines = []
         n_spine_samples = 1000
         for i in range(num_lines):
-            spline_map[i] = sample_spline(line_map[i], 1000)
-        self.lines = spline_map.values()
-        return self.lines
+            final_lines.append(
+                Line(sample_spline(line_map[i], 1000), Pen.ONE)
+            )
+        return final_lines
 
     def lerp_lines(self, line: list[Py5Vector], new_line: list[Py5Vector], ratio: float) -> list[Py5Vector]:
         lerped_line = []
@@ -107,7 +101,3 @@ class NoiseLineGenerator(LineGenerator):
                 )
             )
         return new_line
-
-nlg = NoiseLineGenerator()
-nlg.generate_lines()
-nlg.generate_gpgl()
