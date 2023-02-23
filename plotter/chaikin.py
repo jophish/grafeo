@@ -3,33 +3,45 @@ from random import randint
 from main import run_prog
 from test import generate_line, sample_spline
 import math
+from LineGenerator import NoiseLineGenerator
+
 WIDTH = 16640
-HEIGHT = 10740
+HEIGHT = 10720
 
 SCALE = .1
 
 class TestSketch(Sketch):
 
-    gpgl = ['H']
+    gpgl = []
+    lines = []
+    shapes = []
+
+    def __init__(self):
+        super().__init__()
+        nlg = NoiseLineGenerator()
+        self.lines = nlg.generate_lines()
+        self.gpgl = nlg.generate_gpgl()
 
     def settings(self):
         self.size(round(WIDTH*SCALE), round(HEIGHT*SCALE))
 
     def setup(self):
-        points = generate_line(500, WIDTH-2500, 1000, 50)
-        spline = sample_spline(points, 1000)
-        curve = self.make_line_from_vectors(spline)
-        self.style_curve(curve)
-        for i in range(180):
-            curve.translate(0, 50 + randint(-20, 20) + 10*math.sin(i*(2*math.pi)/20))
-            self.make_gpgl(curve)
-            self.shape(curve)
+        for line in self.lines:
+            shape = self.make_shape_from_line(line)
+            self.style_shape(shape)
+            self.shapes.append(shape)
+        for shape in self.shapes:
+            self.shape(shape)
 
     def draw(self):
         return
 
+    def style_shape(self, shape):
+        shape.set_fill(False)
+        shape.set_stroke_weight(20)
+        shape.scale(SCALE)
 
-    def make_line_from_vectors(self, vectors: list[Py5Vector]):
+    def make_shape_from_line(self, vectors: list[Py5Vector]):
         s = self.create_shape()
         s.begin_shape()
         for vector in vectors:
@@ -37,22 +49,24 @@ class TestSketch(Sketch):
         s.end_shape()
         return s
 
-    def make_gpgl(self, curve):
+    def make_incremental_gpgl(self, curve, translation_x, translation_y):
+        for i in range(curve.get_vertex_count()):
+            if i == 0:
+                self.gpgl.append(f'M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
+            self.gpgl.append(f'D{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
+
+    def make_gpgl(self, curve, translation_x, translation_y):
         command = 'D'
 
         for i in range(curve.get_vertex_count()):
             if i == 0:
-                self.gpgl.append(f'M{round(curve.get_vertex(i).x)},{round(curve.get_vertex(i).y)}')
+                self.gpgl.append(f'M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
 
-            command += f'{round(curve.get_vertex(i).x)},{round(curve.get_vertex(i).y)}'
+            command += f'{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}'
             if i != (curve.get_vertex_count() - 1):
                 command += ','
-        self.gpgl.append(command)
 
-    def style_curve(self, curve):
-        curve.set_fill(False)
-        curve.set_stroke_weight(20)
-        curve.scale(SCALE)
+        self.gpgl.append(command)
 
     def make_curve(self, height, n_points, tightness):
         s = self.create_shape()
@@ -141,6 +155,8 @@ class TestSketch(Sketch):
 def main():
     sketch = TestSketch()
     sketch.run_sketch(block=False)
+    input()
+    print(sketch.gpgl[:6])
     input()
     run_prog(sketch.gpgl)
 

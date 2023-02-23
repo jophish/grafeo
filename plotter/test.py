@@ -6,7 +6,7 @@ from py5 import Py5Vector
 import math
 #
 # width: Maximum width
-# n_points: 
+# n_points:
 def generate_line(start_x: int, width: int, height: int, n_points: int) -> list[Py5Vector]:
     vertices = []
     x_sin_amp = 4*(width/(n_points -1))

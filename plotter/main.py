@@ -70,7 +70,7 @@ def main_old():
 def run_prog(gpgl):
     ser = serial.Serial(
         port='/dev/ttyUSB0',
-        baudrate=1200,
+        baudrate=9600,
         bytesize=EIGHTBITS,
         parity=PARITY_EVEN,
         stopbits=STOPBITS_TWO,
@@ -81,7 +81,7 @@ def run_prog(gpgl):
     ser.write(fmt(":"))
     sleep(5)
     ser.write(fmt("M0, 0,"))
-    ser.write(fmt("J2"))
+    ser.write(fmt("J3"))
 
     for i in range(len(gpgl)):
         ser.write(fmt(gpgl[i]))
