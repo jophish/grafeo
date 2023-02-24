@@ -2,14 +2,14 @@ from py5 import Py5Vector
 from enum import Enum
 
 class Pen(Enum):
-    ONE = 1
-    TWO = 2
-    THREE = 3
-    FOUR = 4
-    FIVE = 5
-    SIX = 6
-    SEVEN = 7
-    EIGHT = 8
+    ONE = 'ONE'
+    TWO = 'TWO'
+    THREE = 'THREE'
+    FOUR = 'FOUR'
+    FIVE = 'FIVE'
+    SIX = 'SIX'
+    SEVEN = 'SEVEN'
+    EIGHT = 'EIGHT'
 
 # The Line class represents a single, contiguous line consisting of 1 or more points.
 # Points are represented as Py5Vectors

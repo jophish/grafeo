@@ -157,7 +157,10 @@ class NoiseLineGenerator(Generator):
         n_spine_samples = kwargs['num_spline_samples']
         for i in range(num_lines):
             line = self.filter_oob(sample_spline(line_map[i], 1000, kwargs['spline_tightness']))
-            final_lines.append(Line(line, Pen.ONE))
+            pen = Pen.ONE
+            if (i % 5 == 0):
+                pen = Pen.TWO
+            final_lines.append(Line(line, pen))
 
         return final_lines
 

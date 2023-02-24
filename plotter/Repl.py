@@ -29,9 +29,9 @@ class Repl():
         'p': 'send to plotter'
     }
 
-    def __init__(self, generator_config):
+    def __init__(self, generator_config, pen_config):
         self.generator_config = generator_config
-        self.sketch = GenSketch(generator_config)
+        self.sketch = GenSketch(generator_config, pen_config)
 
     def show_help(self):
         for (key, value) in self.commands.items():
@@ -130,8 +130,9 @@ class Repl():
         if not self.current_generator:
             print('no generator currently defined. set a generator first')
             return
-        generator_param_values = load_config()[self.current_generator.get_name()]
-        self.current_generator.set_param_values(generator_param_values)
+        config = load_config()
+        self.current_generator.set_param_values(config[self.current_generator.get_name()])
+        self.sketch.set_pen_config(config['pen_config'])
         self.generate()
 
     def process_cmd(self, cmd):

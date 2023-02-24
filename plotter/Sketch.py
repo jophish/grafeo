@@ -1,20 +1,24 @@
 from py5 import Sketch, Py5Vector
 import math
-from plotter.generators.impl.NoiseLineGenerator import NoiseLineGenerator
 from plotter.generators.Generator import Generator, GeneratorConfig
-from plotter.generators.Line import Line
+from plotter.generators.Line import Line, Pen
 
 class GenSketch(Sketch):
 
     config: GeneratorConfig
+    pens = {}
     generator: Generator
 
-    def __init__(self, config: GeneratorConfig):
+    def __init__(self, config: GeneratorConfig, pen_config):
         super().__init__()
         self.config = config
+        self.pens = pen_config
 
     def set_generator(self, generator: Generator):
         self.generator = generator
+
+    def set_pen_config(self, pen_config):
+        self.pens = pen_config
 
     def settings(self):
         self.size(
@@ -30,13 +34,7 @@ class GenSketch(Sketch):
         lines = self.generator.get_lines()
         for line in lines:
             shape = self.make_shape_from_line(line)
-            self.style_shape(shape)
             self.shape(shape)
-
-    def style_shape(self, shape):
-        shape.set_fill(False)
-        shape.set_stroke_weight(20)
-        shape.scale(self.config['scale'])
 
     def make_shape_from_line(self, line: Line):
         s = self.create_shape()
@@ -44,10 +42,10 @@ class GenSketch(Sketch):
         for vector in line.get_points():
             s.vertex(vector.x, vector.y)
         s.end_shape()
+        s.set_fill(False)
+
+        pen = self.pens[line.get_pen().value]
+        s.set_stroke_weight(pen['weight'])
+        s.set_stroke(pen['color'])
+        s.scale(self.config['scale'])
         return s
-
-
-def main():
-
-    sketch = TestSketch(NoiseLineGenerator)
-

@@ -1,8 +1,20 @@
- {
+{
   "generator_config": {
     "width": 16640,
     "height": 10720,
     "scale": 0.1
+  },
+  "pen_config": {
+    "ONE": {
+      "descr": "Micron 05 Black",
+      "weight": 10,
+      "color": "#000000"
+    },
+    "TWO": {
+      "descr": "Micron 05 Blue",
+      "weight": 10,
+      "color": "#000000"
+    }
   },
   "noisy lines": {
     "num_lines": 180,
@@ -21,7 +33,7 @@
     "line_x_rand_amp": 400,
     "line_x_sin_amp_exp": 0.68,
     "line_x_sin_freq_exp": 1,
-    "line_x_rand_amp_exp": 0.3,
+    "line_x_rand_amp_exp": 0.4,
     "line_y_sin_amp": 10,
     "line_y_sin_freq": 200,
     "line_y_rand_amp": 100,
