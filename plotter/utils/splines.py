@@ -7,20 +7,42 @@ import math
 #
 # width: Maximum width
 # n_points:
-def generate_line(start_x: int, width: int, height: int, n_points: int) -> list[Py5Vector]:
+def generate_line(
+        start_x: int,
+        width: int,
+        height: int,
+        n_points: int,
+        x_sin_amp: float,
+        x_sin_freq: float,
+        x_rand_amp: float,
+        x_sin_amp_exp: float,
+        x_sin_freq_exp: float,
+        x_rand_amp_exp: float,
+        y_sin_amp: float,
+        y_sin_freq: float,
+        y_rand_amp: float,
+        y_sin_amp_exp: float,
+        y_sin_freq_exp: float,
+        y_rand_amp_exp: float,
+) -> list[Py5Vector]:
     vertices = []
-    x_sin_amp = 4*(width/(n_points -1))
-    x_sin_freq = (2*math.pi)/(width/(n_points - 1)/2)
-    x_rand_amp = round(1.3*(width/(n_points -1)))
+    # x_sin_amp = 4*(width/(n_points -1))
+    # x_sin_freq = (2*math.pi)/(width/(n_points - 1)/2)
+    # x_rand_amp = round(1.3*(width/(n_points -1)))
 
-    y_sin_amp = 300
-    y_sin_freq = (2*math.pi)/(width/(n_points - 1))
-    y_rand_amp = 200
+    # y_sin_amp = 300
+    # y_sin_freq = (2*math.pi)/(width/(n_points - 1))
+    # y_rand_amp = 200
+
     for i in range(n_points):
         x = start_x + (i * (width/(n_points-1)))
-        x += (i/n_points)*math.sin(x_sin_freq*x)*x_sin_amp + randint(-x_rand_amp, x_rand_amp)
 
-        y = height + (i/n_points)*(math.sin(y_sin_freq*x)*y_sin_amp + randint(-y_rand_amp, y_rand_amp))
+        frac = (i/n_points)
+        new_x_rand_amp = round(x_rand_amp**(1 + frac*x_rand_amp_exp))
+        x += math.sin(x_sin_freq*x**(1 + frac*x_sin_freq_exp))*x_sin_amp**(1 + frac*x_sin_amp_exp) + randint(-new_x_rand_amp, new_x_rand_amp)
+
+        new_y_rand_amp = round(y_rand_amp**(1 + frac*y_rand_amp_exp))
+        y = height + math.sin(y_sin_freq*x**(1 + frac*y_sin_freq_exp))*y_sin_amp**(1 + frac*y_sin_amp_exp) + randint(-new_y_rand_amp, new_y_rand_amp)
         vertices.append(Py5Vector(x, y))
     return vertices
 

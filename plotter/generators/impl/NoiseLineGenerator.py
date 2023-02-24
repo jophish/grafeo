@@ -11,45 +11,122 @@ HEIGHT = 10720
 
 class NoiseLineGenerator(Generator):
 
+    name = 'noisy lines'
+
+    @classmethod
+    def get_name(cls):
+        return cls.name
+
     def __init__(self, config: GeneratorConfig):
         super().__init__(config)
 
     def get_param_list(self) -> ParamList:
         return {
-            'num_lines': ('nl', 'Number of lines to draw', int)
+            'num_lines': ('nl', 'Number of lines to draw', int),
+            'num_unique_lines': ('nul', 'Number of unique lines to lerp between', int),
+            'unique_line_placement_strategy': ('ulps', 'Strategy to use for placing unique lines vertically. Options are "UNIFORM", "RAND"', str),
+            'line_distance': ('ld', 'Base distance between consecutive lines', int),
+            'line_distance_rand_amp': ('ldra', 'Amplitude of randomness added to distance between consecutive lines', int),
+            'line_distance_sin_amp': ('ldsa', 'Amplitude of sin added to distance between consecutive lines', int),
+            'num_control_points': ('ncp', 'Number of control points to use for each line', int),
+            'start_x': ('sx', 'Starting location on x axis for drawing lines', int),
+            'start_y': ('sy', 'Starting location on y axis for drawing lines (ending location depends on number of lines)', int),
+            'end_x': ('ex', 'Ending location on x axis for drawing lines (as distance from border of region)', int),
+            'num_spline_samples': ('nss', 'Number of samples per spline', int),
+            'line_x_sin_amp': ('lxsa', 'Amplitude of sinusoidal variation for x component of line generation', float),
+            'line_x_sin_freq': ('lxsf', 'Frequency of sinusoidal variation for x component of line generation', float),
+            'line_x_rand_amp': ('lxra', 'Amplitude of random variation for x component of line generation', float),
+            'line_x_sin_amp_exp': ('lxsae', 'Exponential factor for amplitude of sinusoidal variation for x component of line generation', float),
+            'line_x_sin_freq_exp': ('lxsfe', 'Exponential factor for frequency of sinusoidal variation for x component of line generation', float),
+            'line_x_rand_amp_exp': ('lxrae', 'Exponential factor for amplitude of random variation for x component of line generation', float),
+            'line_y_sin_amp': ('lysa', 'Amplitude of sinusoidal variation for y component of line generation', float),
+            'line_y_sin_freq': ('lysf', 'Frequency of sinusoidal variation for y component of line generation', float),
+            'line_y_rand_amp': ('lyra', 'Amplitude of random variation for y component of line generation', float),
+            'line_y_sin_amp_exp': ('lysae', 'Exponential factor for amplitude of sinusoidal variation for y component of line generation', float),
+            'line_y_sin_freq_exp': ('lysfe', 'Exponential factor for frequency of sinusoidal variation for y component of line generation', float),
+            'line_y_rand_amp_exp': ('lyrae', 'Exponential factor for amplitude of random variation for y component of line generation', float),
         }
 
     def get_default_params(self) -> ParamValues:
         return {
-            'num_lines': 200
+            'num_lines': 200,
+            'num_unique_lines': 5,
+            'unique_line_placement_strategy': 'UNIFORM',
+            'line_distance': 30,
+            'line_distance_rand_amp': 30,
+            'line_distance_sin_amp': 10,
+            'num_control_points': 50,
+            'start_x': 1000,
+            'start_y': 2000,
+            'end_x': 1800,
+            'num_spline_samples': 1000,
+            'line_x_sin_amp': 100,
+            'line_x_sin_freq': 50,
+            'line_x_rand_amp': 50,
+            'line_x_sin_amp_exp': .4,
+            'line_x_sin_freq_exp': .4,
+            'line_x_rand_amp_exp': .4,
+            'line_y_sin_amp': 100,
+            'line_y_sin_freq': 50,
+            'line_y_rand_amp': 50,
+            'line_y_sin_amp_exp': .4,
+            'line_y_sin_freq_exp': .2,
+            'line_y_rand_amp_exp': .4
         }
 
-    def generate_lines(self):
-        # Use margin of 1000 units
-        start_x = 1000
-        start_y = 1000
+    def generate_lines(self, **kwargs):
+        # Define margins
+        start_x = kwargs['start_x']
+        start_y = kwargs['start_y']
 
         y_offsets = []
 
         # First, pick y offsets of each line
         cum_translation_y = 0
-        num_lines = 200
+        num_lines = kwargs['num_lines']
+
+        line_distance = kwargs['line_distance']
+        line_distance_rand_amp = kwargs['line_distance_rand_amp']
         for i in range(num_lines):
-            cum_translation_y += round(40 + random.randint(-20, 20) + 10*math.sin(i*(2*math.pi)/20))
+            cum_translation_y += round(line_distance + random.randint(-line_distance_rand_amp, line_distance_rand_amp) + kwargs['line_distance_sin_amp']*math.sin(i*(2*math.pi)/20))
             y_offsets.append(cum_translation_y)
 
-        # We want to lerp into a new random line every so often. The frequency at which we change lines should
-        # be irregular.
-        num_unique_lines = 10
-        unique_line_indices = sorted(random.sample(list(range(10,num_lines-10)), num_unique_lines - 2)) # Skip the first and last 10 so the boundaries are clean
+        # We want to lerp into a new random line every so often. We have different strategies for choosing where to place these lines.
+        num_unique_lines = kwargs['num_unique_lines']
+        unique_line_placement_strategy = kwargs['unique_line_placement_strategy']
+        unique_line_indices = []
+        if unique_line_placement_strategy == 'UNIFORM':
+            lines_per_unique = num_lines/(num_unique_lines + 1)
+            unique_line_indices = [round(i*lines_per_unique) for i in range(1,num_unique_lines+1)]
+        elif unique_line_placement_strategy == 'RAND':
+            unique_line_indices = sorted(random.sample(list(range(num_lines)), num_unique_lines))
+        else:
+            raise Exception(f'Unknown line placement strategy "{unique_line_placement_strategy}"')
         unique_line_indices = [0] + unique_line_indices + [num_lines-1]
-        print(unique_line_indices)
+
 
         # Generate unique lines
-        points_per_line = 50
+        points_per_line = kwargs['num_control_points']
         unique_lines = [
-            generate_line(start_x, self.config['width'] - start_x*2, start_y, 50)
-            for i in range(num_unique_lines)
+            generate_line(
+                start_x,
+                self.config['width'] - kwargs['end_x'],
+                start_y,
+                points_per_line,
+                x_sin_amp=kwargs['line_x_sin_amp'],
+                x_sin_freq=kwargs['line_x_sin_freq'],
+                x_rand_amp=kwargs['line_x_rand_amp'],
+                x_sin_amp_exp=kwargs['line_x_sin_amp_exp'],
+                x_sin_freq_exp=kwargs['line_x_sin_freq_exp'],
+                x_rand_amp_exp=kwargs['line_x_rand_amp_exp'],
+                y_sin_amp=kwargs['line_y_sin_amp'],
+                y_sin_freq=kwargs['line_y_sin_freq'],
+                y_rand_amp=kwargs['line_y_rand_amp'],
+                y_sin_amp_exp=kwargs['line_y_sin_amp_exp'],
+                y_sin_freq_exp=kwargs['line_y_sin_freq_exp'],
+                y_rand_amp_exp=kwargs['line_y_rand_amp_exp'],
+            )
+            for i in range(num_unique_lines + 2) # Add two for start/end
         ]
 
         # Create a mapping of line indices to actual lines, and seed it with the unique lines
@@ -69,18 +146,28 @@ class NoiseLineGenerator(Generator):
                 continue
 
             # If we haven't seen this line before, we want to lerp between the current unique index and the next one.
-            fraction_till_next_line = (i - current_unique_index)/(next_unique_index - current_unique_index) # This will be the ratio for lerping
+            fraction_till_next_line = (y_offsets[i] - y_offsets[current_unique_index])/(
+                y_offsets[next_unique_index] - y_offsets[current_unique_index]) # This will be the ratio for lerping
+
             lerped_line = self.lerp_lines(line_map[current_unique_index], line_map[next_unique_index], fraction_till_next_line)
             line_map[i] = lerped_line
 
         # Now, we have all of our lines. Turn them into splines!
         final_lines = []
-        n_spine_samples = 1000
+        n_spine_samples = kwargs['num_spline_samples']
         for i in range(num_lines):
-            final_lines.append(
-                Line(sample_spline(line_map[i], 1000), Pen.ONE)
-            )
+            line = self.filter_oob(sample_spline(line_map[i], 1000))
+            final_lines.append(Line(line, Pen.ONE))
+
         return final_lines
+
+    def filter_oob(self, line: list[Py5Vector]) -> list[Py5Vector]:
+        new_line = []
+        for v in line:
+            if v.x < 0 or v.x >= self.config['width'] or v.y < 0 or v.y > self.config['height']:
+                continue
+            new_line.append(v)
+        return new_line
 
     def lerp_lines(self, line: list[Py5Vector], new_line: list[Py5Vector], ratio: float) -> list[Py5Vector]:
         lerped_line = []
