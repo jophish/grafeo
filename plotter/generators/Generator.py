@@ -45,6 +45,9 @@ class Generator(ABC):
     def set_param_value(self, param_name: str, param_value: ParamType):
         self.param_values[param_name] = param_value
 
+    def set_param_values(self, param_values: ParamValues):
+        self.param_values = param_values
+
     def get_name(self):
         return self.name
 

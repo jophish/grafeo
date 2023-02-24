@@ -1,11 +1,8 @@
 from plotter.Repl import Repl
-
+from plotter.config import load_config
 def main():
-    generator_config = {
-        'width': 16640,
-        'height': 10720
-    }
-    repl = Repl(generator_config)
+    config = load_config()
+    repl = Repl(config['generator_config'])
     repl.start_repl()
 
 main()

@@ -1,0 +1,32 @@
+ {
+  "generator_config": {
+    "width": 16640,
+    "height": 10720
+  },
+  "noisy lines": {
+    "num_lines": 200,
+    "num_unique_lines": 5,
+    "unique_line_placement_strategy": "UNIFORM",
+    "line_distance": 40,
+    "line_distance_rand_amp": 50,
+    "line_distance_sin_amp": 10,
+    "num_control_points": 50,
+    "start_x": 1000,
+    "start_y": 1500,
+    "end_x": 2000,
+    "num_spline_samples": 1000,
+    "line_x_sin_amp": 45,
+    "line_x_sin_freq": 200,
+    "line_x_rand_amp": 100,
+    "line_x_sin_amp_exp": 0.68,
+    "line_x_sin_freq_exp": 1,
+    "line_x_rand_amp_exp": 0.3,
+    "line_y_sin_amp": 10,
+    "line_y_sin_freq": 200,
+    "line_y_rand_amp": 50,
+    "line_y_sin_amp_exp": 0.3,
+    "line_y_sin_freq_exp": 0.1,
+    "line_y_rand_amp_exp": 0.1,
+    "spline_tightness": 10
+  }
+}

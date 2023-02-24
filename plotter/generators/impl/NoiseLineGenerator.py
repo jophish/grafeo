@@ -6,8 +6,6 @@ from plotter.utils.splines import generate_line, sample_spline
 from ..Generator import Generator, GeneratorConfig, ParamList, ParamValues
 from ..Line import Line, Pen
 
-WIDTH = 16640
-HEIGHT = 10720
 
 class NoiseLineGenerator(Generator):
 
@@ -33,6 +31,7 @@ class NoiseLineGenerator(Generator):
             'start_y': ('sy', 'Starting location on y axis for drawing lines (ending location depends on number of lines)', int),
             'end_x': ('ex', 'Ending location on x axis for drawing lines (as distance from border of region)', int),
             'num_spline_samples': ('nss', 'Number of samples per spline', int),
+            'spline_tightness': ('st', '"Tightness" parameter for spline generation', int),
             'line_x_sin_amp': ('lxsa', 'Amplitude of sinusoidal variation for x component of line generation', float),
             'line_x_sin_freq': ('lxsf', 'Frequency of sinusoidal variation for x component of line generation', float),
             'line_x_rand_amp': ('lxra', 'Amplitude of random variation for x component of line generation', float),
@@ -60,6 +59,7 @@ class NoiseLineGenerator(Generator):
             'start_y': 2000,
             'end_x': 1800,
             'num_spline_samples': 1000,
+            'spline_tightness': 0,
             'line_x_sin_amp': 100,
             'line_x_sin_freq': 50,
             'line_x_rand_amp': 50,
@@ -156,7 +156,7 @@ class NoiseLineGenerator(Generator):
         final_lines = []
         n_spine_samples = kwargs['num_spline_samples']
         for i in range(num_lines):
-            line = self.filter_oob(sample_spline(line_map[i], 1000))
+            line = self.filter_oob(sample_spline(line_map[i], 1000, kwargs['spline_tightness']))
             final_lines.append(Line(line, Pen.ONE))
 
         return final_lines

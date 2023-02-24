@@ -1,6 +1,7 @@
 from plotter.generators.impl.NoiseLineGenerator import NoiseLineGenerator
 from plotter.Sketch import GenSketch
 from plotter.ser import run_prog
+from plotter.config import load_config, write_config_key
 
 class Repl():
 
@@ -23,6 +24,7 @@ class Repl():
         'sd': 'set default parameters',
         'd': 'dump to file: d [filename-suffix]',
         'l': 'load from file: l [filename]',
+        'r': 'refresh config from file',
         'q': 'quit',
         'p': 'send to plotter'
     }
@@ -63,6 +65,8 @@ class Repl():
                     print('please enter y or n')
 
         self.current_generator = self.generators[gen_num](self.generator_config)
+        # Load the config file
+        self.current_generator.set_param_values(load_config()[self.current_generator.get_name()])
         self.sketch.set_generator(self.current_generator)
 
     def list_parameters(self):
@@ -122,6 +126,14 @@ class Repl():
             self.sketch.run_sketch(block=False)
         self.sketch.redraw()
 
+    def refresh(self):
+        if not self.current_generator:
+            print('no generator currently defined. set a generator first')
+            return
+        generator_param_values = load_config()[self.current_generator.get_name()]
+        self.current_generator.set_param_values(generator_param_values)
+        self.generate()
+
     def process_cmd(self, cmd):
         cmd_words = cmd.split(' ')
 
@@ -152,6 +164,8 @@ class Repl():
             self.generate()
         elif cmd_words[0] == 'p':
             self.plot()
+        elif cmd_words[0] == 'r':
+            self.refresh()
         elif cmd_words[0] == 'q':
             self.quit()
         else:
