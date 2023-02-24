@@ -12,6 +12,7 @@ ParamValues = dict[str, ParamType]
 class GeneratorConfig(TypedDict):
     width: int
     height: int
+    scale: float
 
 # The Generator class is the base class from which "art generators" inherit
 # Each instance should ultimately generate ""

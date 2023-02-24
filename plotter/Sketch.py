@@ -4,11 +4,6 @@ from plotter.generators.impl.NoiseLineGenerator import NoiseLineGenerator
 from plotter.generators.Generator import Generator, GeneratorConfig
 from plotter.generators.Line import Line
 
-WIDTH = 16640
-HEIGHT = 10720
-
-SCALE = .1
-
 class GenSketch(Sketch):
 
     config: GeneratorConfig
@@ -22,7 +17,10 @@ class GenSketch(Sketch):
         self.generator = generator
 
     def settings(self):
-        self.size(round(self.config['width']*SCALE), round(self.config['height']*SCALE))
+        self.size(
+            round(self.config['width']*self.config['scale']),
+            round(self.config['height']*self.config['scale'])
+        )
 
     def setup(self):
         self.no_loop()
@@ -38,7 +36,7 @@ class GenSketch(Sketch):
     def style_shape(self, shape):
         shape.set_fill(False)
         shape.set_stroke_weight(20)
-        shape.scale(SCALE)
+        shape.scale(self.config['scale'])
 
     def make_shape_from_line(self, line: Line):
         s = self.create_shape()
