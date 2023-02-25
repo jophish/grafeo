@@ -53,6 +53,9 @@ class Generator(ABC):
         return self.name
 
     def get_lines(self) -> list[Line]:
+        if not self.lines:
+            return None
+
         return self.lines
 
     # Main method for line generation

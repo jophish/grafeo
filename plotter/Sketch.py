@@ -1,7 +1,7 @@
 from py5 import Sketch, Py5Vector
 import math
 from plotter.generators.Generator import Generator, GeneratorConfig
-from plotter.generators.Line import Line, Pen
+from plotter.generators.Line import Line
 
 class GenSketch(Sketch):
 
@@ -44,7 +44,7 @@ class GenSketch(Sketch):
         s.end_shape()
         s.set_fill(False)
 
-        pen = self.pens[line.get_pen().value]
+        pen = self.pens[str(line.get_pen_num())]
         s.set_stroke_weight(pen['weight'])
         s.set_stroke(pen['color'])
         s.scale(self.config['scale'])

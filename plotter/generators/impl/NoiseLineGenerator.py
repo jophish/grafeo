@@ -4,8 +4,8 @@ import random
 import math
 from plotter.utils.splines import generate_line, sample_spline
 from ..Generator import Generator, GeneratorConfig, ParamList, ParamValues
-from ..Line import Line, Pen
-
+from ..Line import Line
+from plotter.utils.hatch import hatch_lines
 
 class NoiseLineGenerator(Generator):
 
@@ -152,15 +152,17 @@ class NoiseLineGenerator(Generator):
             lerped_line = self.lerp_lines(line_map[current_unique_index], line_map[next_unique_index], fraction_till_next_line)
             line_map[i] = lerped_line
 
+        num_diff_pens = 8
         # Now, we have all of our lines. Turn them into splines!
         final_lines = []
         n_spine_samples = kwargs['num_spline_samples']
         for i in range(num_lines):
             line = self.filter_oob(sample_spline(line_map[i], 1000, kwargs['spline_tightness']))
-            pen = Pen.ONE
-            if (i % 5 == 0):
-                pen = Pen.TWO
-            final_lines.append(Line(line, pen))
+            pen_num = 0
+            if (i % 3 == 0):
+                pen_num = 1
+            final_lines.append(Line(line, i % num_diff_pens))
+
 
         return final_lines
 

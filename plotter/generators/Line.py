@@ -16,12 +16,12 @@ class Pen(Enum):
 # Lines can have properties associated with them, including the pen to use.
 class Line():
 
-    pen: Pen
+    pen_num: int
     points: list[Py5Vector]
 
-    def __init__(self, points: list[Py5Vector], pen: Pen):
+    def __init__(self, points: list[Py5Vector], pen_num: int):
         self.points = points
-        self.pen = pen
+        self.pen_num = pen_num
 
     def get_points(self):
         return self.points
@@ -29,8 +29,8 @@ class Line():
     def set_points(self, points: list[Py5Vector]):
         self.points = points
 
-    def get_pen(self):
-        return self.pen
+    def get_pen_num(self):
+        return self.pen_num
 
-    def set_pen(self, pen: Pen):
-        self.pen = pen
+    def set_pen_num(self, pen_num: int):
+        self.pen_num = pen_num

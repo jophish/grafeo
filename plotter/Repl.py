@@ -2,6 +2,7 @@ from plotter.generators.impl.NoiseLineGenerator import NoiseLineGenerator
 from plotter.Sketch import GenSketch
 from plotter.ser import run_prog
 from plotter.config import load_config, write_config_key
+from gpgl import GpglGenerator
 
 class Repl():
 
@@ -32,6 +33,7 @@ class Repl():
     def __init__(self, generator_config, pen_config):
         self.generator_config = generator_config
         self.sketch = GenSketch(generator_config, pen_config)
+        self.gpgl_generator = GpglGenerator(generator_config, pen_config)
 
     def show_help(self):
         for (key, value) in self.commands.items():
@@ -103,13 +105,17 @@ class Repl():
         if not self.current_generator:
             print('no generator currently defined. set a generator and generate something first')
             return
-        gpgl = self.current_generator.generate_gpgl()
-        if not gpgl:
+        lines = self.current_generator.get_lines()
+        if not lines:
             print('no gpgl generated. have you generated an image yet?')
             return
 
+        self.gpgl_generator.set_lines(lines)
+        gpgl = self.gpgl_generator.generate_gpgl()
+
+        config = load_config()
         print('sending to plotter!')
-        run_prog(gpgl)
+        run_prog(gpgl, config['pen_config'])
 
     def generate(self):
         if not self.current_generator:
@@ -133,6 +139,7 @@ class Repl():
         config = load_config()
         self.current_generator.set_param_values(config[self.current_generator.get_name()])
         self.sketch.set_pen_config(config['pen_config'])
+        self.gpgl_generator.set_pen_config(config['pen_config'])
         self.generate()
 
     def process_cmd(self, cmd):

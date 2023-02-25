@@ -46,7 +46,7 @@ def main_old():
 
         print(f'TOTAL TIME: {end_time-start_time}')
 
-def run_prog(gpgl):
+def run_prog(gpgl, pen_config):
     ser = serial.Serial(
         port='/dev/ttyUSB0',
         baudrate=9600,
@@ -59,10 +59,18 @@ def run_prog(gpgl):
 
     ser.write(fmt(":"))
     sleep(5)
-    ser.write(fmt("M0, 0,"))
-    ser.write(fmt("J3"))
+    ser.write(fmt("M0, 0"))
 
     for i in range(len(gpgl)):
+        if gpgl[i][:2] == 'PR':
+            print('Once plotting has paused, please replace pen!')
+            new_pen_num = gpgl[i][2]
+            new_pen_config = pen_config[str(new_pen_num)]
+            print(f'  Pen to load: {new_pen_config["descr"]}')
+            print(f'  Slot to load in: {new_pen_config["location"]}')
+            ser.write(fmt('J0'))
+            input('Press enter to continue')
+
         ser.write(fmt(gpgl[i]))
         print(f'{round(i/len(gpgl)*100, 2)}%')
 
