@@ -82,7 +82,6 @@ def make_parameter_items(managers):
                         )
                     elif param_details[2] == 'enum':
                         dpg.add_combo(
-                            label=param_name,
                             items=param_details[3],
                             user_data=user_data,
                             callback=update_parameter_callback,
