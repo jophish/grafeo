@@ -3,47 +3,51 @@ from py5 import Py5Vector
 import random
 import math
 from plotter.utils.splines import generate_line, sample_spline
-from ..Generator import Generator, GeneratorConfig, ParamList, ParamValues
+from ..Generator import Generator, ParamList, ParamValues
 from ..Line import Line
 from plotter.utils.hatch import hatch_lines
 
 class NoiseLineGenerator(Generator):
 
-    name = 'noisy lines'
+    friendly_name = 'noisy lines'
 
     @classmethod
-    def get_name(cls):
-        return cls.name
+    def get_friendly_name(cls):
+        return cls.friendly_name
 
-    def __init__(self, config: GeneratorConfig):
-        super().__init__(config)
+    def __init__(self):
+        self.config = {
+            'width': 16640,
+            'height': 10720
+        }
+        super().__init__()
 
     def get_param_list(self) -> ParamList:
         return {
-            'num_lines': ('nl', 'Number of lines to draw', int),
-            'num_unique_lines': ('nul', 'Number of unique lines to lerp between', int),
-            'unique_line_placement_strategy': ('ulps', 'Strategy to use for placing unique lines vertically. Options are "UNIFORM", "RAND"', str),
-            'line_distance': ('ld', 'Base distance between consecutive lines', int),
-            'line_distance_rand_amp': ('ldra', 'Amplitude of randomness added to distance between consecutive lines', int),
-            'line_distance_sin_amp': ('ldsa', 'Amplitude of sin added to distance between consecutive lines', int),
-            'num_control_points': ('ncp', 'Number of control points to use for each line', int),
-            'start_x': ('sx', 'Starting location on x axis for drawing lines', int),
-            'start_y': ('sy', 'Starting location on y axis for drawing lines (ending location depends on number of lines)', int),
-            'end_x': ('ex', 'Ending location on x axis for drawing lines (as distance from border of region)', int),
-            'num_spline_samples': ('nss', 'Number of samples per spline', int),
-            'spline_tightness': ('st', '"Tightness" parameter for spline generation', int),
-            'line_x_sin_amp': ('lxsa', 'Amplitude of sinusoidal variation for x component of line generation', float),
-            'line_x_sin_freq': ('lxsf', 'Frequency of sinusoidal variation for x component of line generation', float),
-            'line_x_rand_amp': ('lxra', 'Amplitude of random variation for x component of line generation', float),
-            'line_x_sin_amp_exp': ('lxsae', 'Exponential factor for amplitude of sinusoidal variation for x component of line generation', float),
-            'line_x_sin_freq_exp': ('lxsfe', 'Exponential factor for frequency of sinusoidal variation for x component of line generation', float),
-            'line_x_rand_amp_exp': ('lxrae', 'Exponential factor for amplitude of random variation for x component of line generation', float),
-            'line_y_sin_amp': ('lysa', 'Amplitude of sinusoidal variation for y component of line generation', float),
-            'line_y_sin_freq': ('lysf', 'Frequency of sinusoidal variation for y component of line generation', float),
-            'line_y_rand_amp': ('lyra', 'Amplitude of random variation for y component of line generation', float),
-            'line_y_sin_amp_exp': ('lysae', 'Exponential factor for amplitude of sinusoidal variation for y component of line generation', float),
-            'line_y_sin_freq_exp': ('lysfe', 'Exponential factor for frequency of sinusoidal variation for y component of line generation', float),
-            'line_y_rand_amp_exp': ('lyrae', 'Exponential factor for amplitude of random variation for y component of line generation', float),
+            'num_lines': ('nl', 'Number of lines to draw', 'int', 5, 1000),
+            'num_unique_lines': ('nul', 'Number of unique lines to lerp between', 'int', 0, 200),
+            'unique_line_placement_strategy': ('ulps', 'Strategy to use for placing unique lines vertically.', 'enum', ['RAND', 'UNIFORM']),
+            'line_distance': ('ld', 'Base distance between consecutive lines', 'int', 0, 500),
+            'line_distance_rand_amp': ('ldra', 'Amplitude of randomness added to distance between consecutive lines', 'int', 0, 500),
+            'line_distance_sin_amp': ('ldsa', 'Amplitude of sin added to distance between consecutive lines', 'int', 0, 500),
+            'num_control_points': ('ncp', 'Number of control points to use for each line', 'int', 0, 1000),
+            'start_x': ('sx', 'Starting location on x axis for drawing lines', 'int', 0, 16640),
+            'start_y': ('sy', 'Starting location on y axis for drawing lines (ending location depends on number of lines)', 'int', 0, 10720),
+            'end_x': ('ex', 'Ending location on x axis for drawing lines (as distance from border of region)', 'int', 0, 16640),
+            'num_spline_samples': ('nss', 'Number of samples per spline', 'int', 1, 5000),
+            'spline_tightness': ('st', '"Tightness" parameter for spline generation', 'int', -1000, 1000),
+            'line_x_sin_amp': ('lxsa', 'Amplitude of sinusoidal variation for x component of line generation', 'float', 0, 1000),
+            'line_x_sin_freq': ('lxsf', 'Frequency of sinusoidal variation for x component of line generation', 'float', 0, 1000),
+            'line_x_rand_amp': ('lxra', 'Amplitude of random variation for x component of line generation', 'float', 0, 1000),
+            'line_x_sin_amp_exp': ('lxsae', 'Exponential factor for amplitude of sinusoidal variation for x component of line generation', 'float', 0, 10),
+            'line_x_sin_freq_exp': ('lxsfe', 'Exponential factor for frequency of sinusoidal variation for x component of line generation', 'float', 0, 10),
+            'line_x_rand_amp_exp': ('lxrae', 'Exponential factor for amplitude of random variation for x component of line generation', 'float', 0, 10),
+            'line_y_sin_amp': ('lysa', 'Amplitude of sinusoidal variation for y component of line generation', 'float', 0, 1000),
+            'line_y_sin_freq': ('lysf', 'Frequency of sinusoidal variation for y component of line generation', 'float', 0, 1000),
+            'line_y_rand_amp': ('lyra', 'Amplitude of random variation for y component of line generation', 'float', 0, 1000),
+            'line_y_sin_amp_exp': ('lysae', 'Exponential factor for amplitude of sinusoidal variation for y component of line generation', 'float', 0, 10),
+            'line_y_sin_freq_exp': ('lysfe', 'Exponential factor for frequency of sinusoidal variation for y component of line generation', 'float', 0, 10),
+            'line_y_rand_amp_exp': ('lyrae', 'Exponential factor for amplitude of random variation for y component of line generation', 'float', 0, 10),
         }
 
     def get_default_params(self) -> ParamValues:
