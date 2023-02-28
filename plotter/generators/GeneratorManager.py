@@ -43,3 +43,9 @@ class GeneratorManager():
 
     def get_current_generator_param_value(self, param_name):
         return self.current_generator.get_param_values()[param_name]
+
+    def get_current_generator_dims(self):
+        return self.current_generator.get_dims()
+
+    def generate_current(self):
+        return self.current_generator.generate()

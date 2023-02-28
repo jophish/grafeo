@@ -65,3 +65,8 @@ class Generator(ABC):
     @abstractmethod
     def get_param_list(self) -> ParamList:
         pass
+
+    # Gets width, height of generated region
+    @abstractmethod
+    def get_dims(self) -> tuple[int, int]:
+        pass

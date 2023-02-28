@@ -18,6 +18,9 @@ class Test(Generator):
     def __init__(self):
         super().__init__()
 
+    def get_dims(self):
+        return (1000, 1000)
+
     def get_param_list(self) -> ParamList:
         return {
             'num_lines': ('nl', 'Number of lines to draw', 'int', 5, 1000),

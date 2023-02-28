@@ -22,6 +22,9 @@ class NoiseLineGenerator(Generator):
         }
         super().__init__()
 
+    def get_dims(self):
+        return (self.config['width'], self.config['height'])
+
     def get_param_list(self) -> ParamList:
         return {
             'num_lines': ('nl', 'Number of lines to draw', 'int', 5, 1000),
