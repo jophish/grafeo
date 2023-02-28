@@ -43,6 +43,43 @@ def update_parameter_callback(sender, app_data, user_data):
     managers['config_manager'].set_param_value(param_name, app_data)
     managers['generator_manager'].current_generator.set_param_value(param_name, app_data)
 
+def render_callback(sender, app_data, user_data):
+    try:
+        dpg.configure_item(
+            "render_button_tag",
+            enabled=False
+        )
+        current_dims = user_data['generator_manager'].get_current_generator_dims()
+        lines = user_data['generator_manager'].generate_current()
+        render_data = user_data['renderer'].render(lines, current_dims[0], current_dims[1])
+        dpg.set_value('render_texture_tag', render_data['data'])
+        dpg.configure_item(
+            "render_texture_tag",
+            width=render_data['width'],
+            height=render_data['height'],
+        )
+        canvas_width, canvas_height = user_data['generator_manager'].current_generator.get_dims()
+        window_width, window_height = dpg.get_item_rect_size("Window")
+        max_render_width = window_width - LEFT_PANEL_WIDTH - 50
+        max_render_height = window_height - 50
+        scale = min(1, max_render_width/canvas_width, max_render_height/canvas_height)
+        dpg.configure_item(
+            "render_image_tag",
+            width=canvas_width*scale,
+            height=canvas_height*scale
+        )
+        dpg.configure_item(
+            "render_button_tag",
+            enabled=True
+        )
+    except:
+        print('error while attempting to render')
+    finally:
+        dpg.configure_item(
+            "render_button_tag",
+            enabled=True
+        )
+
 def make_parameter_items(managers):
     current_generator = managers['generator_manager'].current_generator
 
@@ -94,21 +131,21 @@ def make_parameter_items(managers):
                             default_value=current_param_value
                         )
 
-def resize_window():
-    print(dpg.get_item_rect_size("Window"))
-    height, width = dpg.get_item_rect_size("Window")
-    size = height
-    dpg.set_item_height("render_section", size)
-    dpg.set_item_width("render_section", size)
-    if dpg.does_alias_exist("render_section"):
-        dpg.delete_item("render_section", children_only=True)
-    dpg.draw_image("texture_tag", (0, 0), (size, size), uv_min=(0, 0), uv_max=(1, 1), parent="render_section")
+def resize_window(sender, app_data, user_data):
+    canvas_width, canvas_height = user_data['generator_manager'].current_generator.get_dims()
+
+    window_width, window_height = dpg.get_item_rect_size("Window")
+    max_render_width = window_width - LEFT_PANEL_WIDTH - 50
+    max_render_height = window_height - 50
+    scale = min(1, max_render_width/canvas_width, max_render_height/canvas_height)
+    dpg.configure_item("render_image_tag", width=canvas_width*scale, height=canvas_height*scale)
 
 
 def setup_gui(managers):
     dpg.create_context()
     dpg.set_global_font_scale(1)
     renderer = Renderer(None, None)
+    managers['renderer'] = renderer
 
     with dpg.theme() as borderless_child_theme:
         with dpg.theme_component(dpg.mvChildWindow):
@@ -130,7 +167,7 @@ def setup_gui(managers):
             dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5, category=dpg.mvThemeCat_Core)
 
     with dpg.item_handler_registry(tag="window_handler"):
-        dpg.add_item_resize_handler(callback=resize_window)
+        dpg.add_item_resize_handler(callback=resize_window, user_data=managers)
 
     with dpg.window(tag="Window"):
         with dpg.group(horizontal=True):
@@ -147,6 +184,7 @@ def setup_gui(managers):
                         callback=select_generator_callback
                     )
                 with dpg.collapsing_header(label='parameters', tag='parameters'):
+                    dpg.add_button(label="render", callback=render_callback, user_data=managers, tag='render_button_tag')
                     # Allow user to choose parameters and generate
                     make_parameter_items(managers)
                 with dpg.collapsing_header(label='i/o'):
@@ -174,26 +212,23 @@ def setup_gui(managers):
             with dpg.group(tag='middle'):
                 with dpg.tab_bar():
                     with dpg.tab(label='output'):
-                        pass
+                        with dpg.texture_registry(show=False, tag='texture_registry_tag'):
+                            current_dims = managers['generator_manager'].get_current_generator_dims()
+                            lines = managers['generator_manager'].generate_current()
+                            render_data = renderer.render(lines, current_dims[0], current_dims[1])
+                            dpg.add_raw_texture(
+                                width=render_data['width'],
+                                height=render_data['height'],
+                                default_value=render_data['data'],
+                                format=dpg.mvFormat_Float_rgba,
+                                tag="render_texture_tag"
+                            )
+                        dpg.add_image('render_texture_tag', width=0, height=0, tag='render_image_tag')
                     with dpg.tab(label='print preview'):
                         pass
-                current_dims = managers['generator_manager'].get_current_generator_dims()
-                with dpg.texture_registry(show=False):
-                    lines = managers['generator_manager'].generate_current()
-                    arr = renderer.render(lines)
-                    print(arr[:100])
-                    SCALE = 1
-                    texture_data = []
-                    for i in range(0, 100 * 100):
-                        texture_data.append(255 / 255)
-                        texture_data.append(0 / 255)
-                        texture_data.append(0 / 255)
-                        texture_data.append(255 / 255)
-                    raw_data = array.array('f', texture_data)
-                    #dpg.add_raw_texture(100, 100, default_value=raw_data, format=dpg.mvFormat_Float_rgba, tag="texture_tag")
-                    dpg.add_raw_texture(width=current_dims[0], height=current_dims[1], default_value=arr, format=dpg.mvFormat_Float_rgba, tag="texture_tag")
-                with dpg.drawlist(width=MIN_VIEWPORT_WIDTH - LEFT_PANEL_WIDTH, height=MIN_VIEWPORT_HEIGHT, tag='render_section'):
-                    pass
+
+
+
 
             # Right Pane
             with dpg.group():
