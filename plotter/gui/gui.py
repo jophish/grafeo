@@ -83,6 +83,8 @@ def render_callback(sender, app_data, user_data):
 def make_parameter_items(managers):
     current_generator = managers['generator_manager'].current_generator
 
+    dpg.add_button(label="render", callback=render_callback, user_data=managers, tag='render_button_tag', parent='parameters')
+
     param_list = current_generator.get_param_list()
     with dpg.table(
             header_row=False, parent='parameters',
@@ -184,7 +186,6 @@ def setup_gui(managers):
                         callback=select_generator_callback
                     )
                 with dpg.collapsing_header(label='parameters', tag='parameters'):
-                    dpg.add_button(label="render", callback=render_callback, user_data=managers, tag='render_button_tag')
                     # Allow user to choose parameters and generate
                     make_parameter_items(managers)
                 with dpg.collapsing_header(label='i/o'):
