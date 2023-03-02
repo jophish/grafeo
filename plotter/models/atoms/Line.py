@@ -1,25 +1,41 @@
-from enum import Enum
+from ...pens.Pen import Pen
+from .Point import Point
+from .Atom import Atom
+from ..BoundingBox import BoundingBox
 
-# The Line class represents a single, contiguous line consisting of 1 or more points.
-# Points are represented as Py5Vectors
-# Lines can have properties associated with them, including the pen to use.
-class Line():
+class Line(Atom):
+    """
+    The Line class is used to represent a line in a scene.
 
-    pen_num: int
-    points: list[Py5Vector]
+    Lines consist of any number of points, as well as a pen identifier.
 
-    def __init__(self, points: list[Py5Vector], pen_num: int):
+    :ivar points: The points comprising the line
+    :vartype points: list[class:`plotter.model.atoms.Point`]
+    """
+
+    points: list[Point]
+
+    def __init__(self, points: list[Point], pen: Pen):
+        """
+        Initialize a line.
+
+        :param points: A list of points
+        :type points: list[class:`plotter.model.atoms.Point`]
+        :param pen: A pen identifier
+        :type pen: class:`plotter.pens.Pen`
+        """
+        super().__init__(pen=pen)
         self.points = points
-        self.pen_num = pen_num
+        self.pen = pen
 
-    def get_points(self):
-        return self.points
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        Get the bounding box of the line.
 
-    def set_points(self, points: list[Py5Vector]):
-        self.points = points
-
-    def get_pen_num(self):
-        return self.pen_num
-
-    def set_pen_num(self, pen_num: int):
-        self.pen_num = pen_num
+        :return: Bounding box of the line
+        :rtype: class:`plotter.models.BoundingBox`
+        """
+        bounding_box = BoundingBox()
+        for point in self.points:
+            bounding_box.update(point.get_bounding_box())
+        return bounding_box

@@ -1,38 +1,74 @@
-from plotter.model.atoms.Line import Line
-from plotter.model.atoms.Point import Point
+from .atoms.Line import Line
+from .atoms.Point import Point
+from ..pens.Pen import Pen
+from .atoms.Atom import Atom
+from .BoundingBox import BoundingBox
+from .Bounded import Bounded
 
-class Model():
-    """
-    The Model class is used to model a generated scene. It consists of any number of atomic
-    units (Atoms) or Models, which together comprise the scene.
 
-    ...
-    Attributes
-    ----------
-    used_pens : list[int]
+class Model(Bounded):
     """
+    The Model class is used to model a generated scene.
+
+    A scene consists of any number of Atoms, or, recursively, Models.
+    """
+
+    _lines: list[Line] = []
+    _points: list[Point] = []
+    _models: list['Model'] = []
+
+    _used_pens: list[Pen] = []
+
+    _bounding_box: BoundingBox
 
     def __init__(self):
-        self.used_pens = []
-
-        self.lines = []
-        self.points = []
-        self.models = []
-
-        self.max_x = None
-        self.max_y = None
-
-        self.min_x = None
-        self.min_y = None
-
-    def add_line(line: Line):
+        """Initialize a model."""
         pass
 
-    def add_point(point: Point):
+    def add_line(self, line: Line):
+        """
+        Add a line to this model.
+
+        :param line: Line to add
+        :type line: class:`plotter.models.atoms.Line`
+        """
+        self._lines.append(line)
+        self._update_bounding_box(line)
+
+    def add_point(self, point: Point):
+        """
+        Add a point to this model.
+
+        :param point: Point to add
+        :type point: class:`plotter.models.atoms.Point`
+        """
+        self._points.append(point)
+
+    def add_model(self, model: 'Model'):
+        """
+        Add a sub-model to this model.
+
+        :param model: Model to add
+        :type model: class:`plotter.models.Model`
+        """
+        self._models.append(model)
+
+    def _update_bounding_box(self, atom: Atom):
         pass
 
-    def add_model(self, model: Model):
-        pass
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        Get the bounding box of the model.
 
-    def get_bounding_box(self):
-        pass
+        :return: The bounding box of the model
+        :rtype: class:`plotter.models.BoundingBox`
+        """
+        bounding_box = BoundingBox()
+        for line in self._lines:
+            bounding_box.update(line.get_bounding_box())
+        for model in self._models:
+            bounding_box.update(model.get_bounding_box())
+        for point in self._points:
+            bounding_box.update(point.get_bounding_box())
+        return self._bounding_box
+

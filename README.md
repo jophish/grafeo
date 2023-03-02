@@ -1,3 +1,6 @@
+docstring reference:
+https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
+
 Ideas:
 
 MP4100 (and GPGL in general) supports a variety of builtins that result in higher quality prints than by only using primitive DRAW commands.

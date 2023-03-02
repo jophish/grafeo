@@ -1,29 +1,32 @@
-import numpy as np
-from scipy.interpolate import splprep, splev
-from random import randint
-import matplotlib.pyplot as plt
-from py5 import Py5Vector
 import math
+from random import randint
+
+import matplotlib.pyplot as plt
+import numpy as np
+from py5 import Py5Vector
+from scipy.interpolate import splev, splprep
+
+
 #
 # width: Maximum width
 # n_points:
 def generate_line(
-        start_x: int,
-        width: int,
-        height: int,
-        n_points: int,
-        x_sin_amp: float,
-        x_sin_freq: float,
-        x_rand_amp: float,
-        x_sin_amp_exp: float,
-        x_sin_freq_exp: float,
-        x_rand_amp_exp: float,
-        y_sin_amp: float,
-        y_sin_freq: float,
-        y_rand_amp: float,
-        y_sin_amp_exp: float,
-        y_sin_freq_exp: float,
-        y_rand_amp_exp: float,
+    start_x: int,
+    width: int,
+    height: int,
+    n_points: int,
+    x_sin_amp: float,
+    x_sin_freq: float,
+    x_rand_amp: float,
+    x_sin_amp_exp: float,
+    x_sin_freq_exp: float,
+    x_rand_amp_exp: float,
+    y_sin_amp: float,
+    y_sin_freq: float,
+    y_rand_amp: float,
+    y_sin_amp_exp: float,
+    y_sin_freq_exp: float,
+    y_rand_amp_exp: float,
 ) -> list[Py5Vector]:
     vertices = []
     # x_sin_amp = 4*(width/(n_points -1))
@@ -35,21 +38,31 @@ def generate_line(
     # y_rand_amp = 200
 
     for i in range(n_points):
-        x = start_x + (i * (width/(n_points-1)))
+        x = start_x + (i * (width / (n_points - 1)))
 
-        frac = (i/n_points)
-        new_x_rand_amp = round(x_rand_amp**(1 + frac*x_rand_amp_exp))
-        x += math.sin(x_sin_freq*x**(1 + frac*x_sin_freq_exp))*x_sin_amp**(1 + frac*x_sin_amp_exp) + randint(-new_x_rand_amp, new_x_rand_amp)
+        frac = i / n_points
+        new_x_rand_amp = round(x_rand_amp ** (1 + frac * x_rand_amp_exp))
+        x += math.sin(x_sin_freq * x ** (1 + frac * x_sin_freq_exp)) * x_sin_amp ** (
+            1 + frac * x_sin_amp_exp
+        ) + randint(-new_x_rand_amp, new_x_rand_amp)
 
-        new_y_rand_amp = round(y_rand_amp**(1 + frac*y_rand_amp_exp))
-        y = height + math.sin(y_sin_freq*x**(1 + frac*y_sin_freq_exp))*y_sin_amp**(1 + frac*y_sin_amp_exp) + randint(-new_y_rand_amp, new_y_rand_amp)
+        new_y_rand_amp = round(y_rand_amp ** (1 + frac * y_rand_amp_exp))
+        y = (
+            height
+            + math.sin(y_sin_freq * x ** (1 + frac * y_sin_freq_exp))
+            * y_sin_amp ** (1 + frac * y_sin_amp_exp)
+            + randint(-new_y_rand_amp, new_y_rand_amp)
+        )
         vertices.append(Py5Vector(x, y))
     return vertices
+
 
 # Given an array of points representing vertices of a line,
 # returns a new array of n points, representing equidistant samples
 # on a spline fitted to the original.
-def sample_spline(points: list[Py5Vector], n_samples: int, tightness: float = 0) -> list[Py5Vector]:
+def sample_spline(
+    points: list[Py5Vector], n_samples: int, tightness: float = 0
+) -> list[Py5Vector]:
     x = np.array([point.x for point in points])
     y = np.array([point.y for point in points])
     xy = np.stack((x, y), axis=-1)
@@ -67,15 +80,20 @@ def sample_spline(points: list[Py5Vector], n_samples: int, tightness: float = 0)
     cumulative_distance /= cumulative_distance[-1]
 
     # compute spline coefficients for normalised cumulative distance
-    tck_prime, _ = splprep([np.linspace(0, 1, num=len(cumulative_distance))], u=cumulative_distance, s=0, k=3)
+    tck_prime, _ = splprep(
+        [np.linspace(0, 1, num=len(cumulative_distance))],
+        u=cumulative_distance,
+        s=0,
+        k=3,
+    )
 
     equidistant_u = splev(u, tck_prime)
     equidistant_point_samples = splev(equidistant_u, tck)
-    equidistant_point_samples = np.stack(equidistant_point_samples, axis=-1).squeeze(axis=0)
+    equidistant_point_samples = np.stack(equidistant_point_samples, axis=-1).squeeze(
+        axis=0
+    )
 
     return [Py5Vector(point[0], point[1]) for point in equidistant_point_samples]
-
-
 
 
 # plt.plot(*equidistant_point_samples.T, 'ok', label='original points')

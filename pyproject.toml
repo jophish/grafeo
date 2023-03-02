@@ -6,7 +6,7 @@ authors = ["Joseph Bergeron <jophish126@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = "3.11"
 py5 = "^0.8.3a1"
 pyserial = "^3.5"
 numpy = "^1.24.2"
@@ -20,6 +20,27 @@ scikit-image = "^0.19.3"
 pycairo = "^1.23.0"
 
 
+[tool.poetry.group.dev.dependencies]
+pyls-isort = "^0.2.2"
+isort = "^5.12.0"
+mypy = "^1.0.1"
+python-lsp-server = {extras = ["all"], version = "^1.7.1"}
+flake8 = "^6.0.0"
+future = "^0.18.3"
+pylsp-mypy = "^0.6.6"
+python-lsp-black = "^1.2.1"
+
+[tool.poetry.scripts]
+test = "poetry_scripts:test"
+format = "poetry_scripts:format_fix"
+format-check = "poetry_scripts:format_check"
+lint = "poetry_scripts:lint"
+type-check = "poetry_scripts:type_check"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
