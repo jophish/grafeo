@@ -1,61 +1,85 @@
 from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 from ..models.Model import Model
-from .Line import Line
-
-# ParamList is a type for describing user-definable parameters for art generators
-# ParamList maps param names to a tuple containing the param's shorthand code, description, and type
-ParamType = str | int | float | bool
-ParamList = dict[str, tuple[str, str, ParamType]]
-ParamValues = dict[str, ParamType]
+from .Parameters import GeneratorParam
 
 
-# The Generator class is the base class from which "art generators" inherit
-# Each instance should ultimately generate ""
 class Generator(ABC):
-    model: Model
-    param_list: ParamList = {}
-    param_values: ParamValues = {}
-    friendly_name: str
+    """
+    The Generator class provides an interface and framework for the generation of parameterized artwork.
 
-    def __init__(self):
+    A child subclassing the Generator class must implement the following two methods:
+    * `get_default_params`
+    * `_generate`
+
+    `get_default_params` describes all the parameters available to this model, initialized to their default values.
+    `_generate` is responsible for actually generating artwork. When artwork is generated, `_generate` will be called
+    with the current values of the generator's parameters. `_generate` is expected to return a :class:`Model` object,
+    which represents a scene to be rendered.
+
+    :ivar name: The friendly name for this generator
+    :vartype name: str
+    :ivar model: The most-recently generated model produced by this generator
+    :vartype model: :class:`Model`
+    :ivar params: The parameters used for this model
+    :vartype params: :class:`Dict[str, :class:`GeneratorParam`]`
+    """
+
+    def __init__(self, name: str):
+        """
+        Initialize a generator.
+
+        :param name: The friendly name for this generator
+        """
+        self.name: str = name
         self.model = Model()
-        self.param_list = self.get_param_list()
         self.reset_params()
 
     def generate(self):
-        self.model = self._generate(**self.param_values)
-        return self.lines
+        """
+        Generate using the current parameter values.
 
-    # Resets parameter values to defaults
+        This will update the `model` attribute of the generator.
+        """
+        self.model = self._generate(**self.params)
+
     def reset_params(self):
-        self.param_values = self.get_default_params()
+        """Reset parameter values to defaults."""
+        self.params: Dict[str, GeneratorParam] = self.get_default_params()
 
-    # Returns the current parameter values
-    def get_param_values(self) -> ParamValues:
-        return self.param_values
+    def set_param_value(self, name: str, value: Any):
+        """
+        Set the parameter with the given name to the given value.
 
-    # Sets the parameter with the given name to the given value
-    def set_param_value(self, param_name: str, param_value: ParamType):
-        self.param_values[param_name] = param_value
+        :param name: The name of the parameter to update
+        :param value: The value to update the parameter to
+        """
+        self.params[name].value = value
 
-    def set_param_values(self, param_values: ParamValues):
-        self.param_values = param_values
+    def set_param_values(self, values: Dict[str, Any]):
+        """
+        Update the value of multiple parameters at once.
 
-    def get_friendly_name(self):
-        return self.friendly_name
+        :param values: Dictionary mapping parameter names to new values
+        """
+        for name, value in values.items():
+            self.params[name].value = value
 
-    # Main method for line generation
     @abstractmethod
-    def _generate(self, **kwargs):
+    def _generate(self, **kwargs) -> Model:
+        """
+        Generate a scene using provided parameters.
+
+        :return: A model representing the generated scene
+        """
         pass
 
-    # Gets the default parameters for this Generator
     @abstractmethod
-    def get_default_params(self) -> ParamValues:
-        pass
+    def get_default_params(self) -> Dict[str, GeneratorParam]:
+        """
+        Get the parameters for this generator, initialized to their default values.
 
-    # Gets information describing the parameters accepted by this Generator
-    @abstractmethod
-    def get_param_list(self) -> ParamList:
+        :return: A dictionary mapping parameter names to their associated parameter objects
+        """
         pass
