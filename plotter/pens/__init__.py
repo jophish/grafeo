@@ -1,3 +1,3 @@
 from .Pen import Pen
 
-__all__ = ['Pen']
+__all__ = ["Pen"]

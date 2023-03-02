@@ -1,7 +1,7 @@
 from ...pens import Pen
-from .Point import Point
-from .Atom import Atom
 from ..BoundingBox import BoundingBox
+from .Atom import Atom
+from .Point import Point
 
 
 class Line(Atom):

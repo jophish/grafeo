@@ -1,9 +1,9 @@
-from .atoms.Line import Line
-from .atoms.Point import Point
 from ..pens.Pen import Pen
 from .atoms.Atom import Atom
-from .BoundingBox import BoundingBox
+from .atoms.Line import Line
+from .atoms.Point import Point
 from .Bounded import Bounded
+from .BoundingBox import BoundingBox
 
 
 class Model(Bounded):
@@ -15,7 +15,7 @@ class Model(Bounded):
 
     _lines: list[Line] = []
     _points: list[Point] = []
-    _models: list['Model'] = []
+    _models: list["Model"] = []
 
     _used_pens: list[Pen] = []
 
@@ -42,7 +42,7 @@ class Model(Bounded):
         """
         self._points.append(point)
 
-    def add_model(self, model: 'Model'):
+    def add_model(self, model: "Model"):
         """
         Add a sub-model to this model.
 
@@ -67,4 +67,3 @@ class Model(Bounded):
         for point in self._points:
             bounding_box.update(point.get_bounding_box())
         return self._bounding_box
-

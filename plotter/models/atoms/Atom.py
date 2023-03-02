@@ -1,6 +1,7 @@
+from typing import TypedDict, Unpack
+
 from ...pens import Pen
 from ..Bounded import Bounded
-from typing import TypedDict, Unpack
 
 
 class _AtomKwargs(TypedDict):
@@ -25,4 +26,4 @@ class Atom(Bounded):
         :type points: class:`plotter.pens.Pen`
         """
         super().__init__(*args, **kwargs)
-        self.pen: Pen = kwargs['pen']
+        self.pen: Pen = kwargs["pen"]

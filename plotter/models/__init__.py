@@ -1,5 +1,5 @@
-from .Model import Model
 from .Bounded import Bounded
 from .BoundingBox import BoundingBox
+from .Model import Model
 
-__all__ = ['Model', 'Bounded', 'BoundingBox']
+__all__ = ["Model", "Bounded", "BoundingBox"]

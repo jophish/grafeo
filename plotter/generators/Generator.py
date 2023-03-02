@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from .Line import Line
+
 from ..models.Model import Model
+from .Line import Line
 
 # ParamList is a type for describing user-definable parameters for art generators
 # ParamList maps param names to a tuple containing the param's shorthand code, description, and type
@@ -12,7 +13,6 @@ ParamValues = dict[str, ParamType]
 # The Generator class is the base class from which "art generators" inherit
 # Each instance should ultimately generate ""
 class Generator(ABC):
-
     model: Model
     param_list: ParamList = {}
     param_values: ParamValues = {}

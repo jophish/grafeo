@@ -5,12 +5,12 @@ from dataclasses import dataclass
 class BoundingBox:
     """Class for representing the bounding box of some two-dimensional area."""
 
-    min_x: float = float('inf')
-    max_x: float = float('-inf')
-    min_y: float = float('inf')
-    max_y: float = float('-inf')
+    min_x: float = float("inf")
+    max_x: float = float("-inf")
+    min_y: float = float("inf")
+    max_y: float = float("-inf")
 
-    def update(self, other: 'BoundingBox'):
+    def update(self, other: "BoundingBox"):
         """
         Update the current bounds given another bounding box.
 

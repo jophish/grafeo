@@ -1,7 +1,8 @@
-from ...pens.Pen import Pen
-from .Atom import Atom
-from ..BoundingBox import BoundingBox
 from scipy.interpolate import interp1d
+
+from ...pens.Pen import Pen
+from ..BoundingBox import BoundingBox
+from .Atom import Atom
 
 
 class Point(Atom):
@@ -30,7 +31,7 @@ class Point(Atom):
         self.x = x
         self.y = y
 
-    def lerp(self, other: 'Point', ratio: float) -> 'Point':
+    def lerp(self, other: "Point", ratio: float) -> "Point":
         """
         Perform linear interpolation between this point and another.
 
@@ -54,9 +55,4 @@ class Point(Atom):
 
         :return: Bounding box of the line
         """
-        return BoundingBox(
-            min_x=self.x,
-            max_x=self.x,
-            min_y=self.y,
-            max_y=self.y
-        )
+        return BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)

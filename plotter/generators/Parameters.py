@@ -1,6 +1,6 @@
-from enum import StrEnum, auto, EnumType, Enum
-from typing import Generic, TypeVar
 from abc import ABC
+from enum import Enum, EnumType, StrEnum, auto
+from typing import Generic, TypeVar
 
 
 class ParamType(StrEnum):
@@ -30,7 +30,9 @@ class GeneratorParam(ABC, Generic[T]):
     :vartype value: :class:`ParamType`
     """
 
-    def __init__(self, name: str, description: str, param_type: ParamType, default_value: T):
+    def __init__(
+        self, name: str, description: str, param_type: ParamType, default_value: T
+    ):
         """
         Initialize a generator param.
 
@@ -60,7 +62,14 @@ class IntParam(GeneratorParam[int]):
     :vartype max_value: int
     """
 
-    def __init__(self, name: str, description: str, default_value: int, min_value: int, max_value: int):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        default_value: int,
+        min_value: int,
+        max_value: int,
+    ):
         """
         Initialize an integer generator param.
 
@@ -88,7 +97,14 @@ class FloatParam(GeneratorParam[float]):
     min_value: float
     max_value: float
 
-    def __init__(self, name: str, description: str, default_value: int, min_value: float, max_value: float):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        default_value: int,
+        min_value: float,
+        max_value: float,
+    ):
         """
         Initialize a float generator param.
 
@@ -111,7 +127,9 @@ class EnumParam(GeneratorParam[Enum]):
     :vartype options: :class:`EnumType`
     """
 
-    def __init__(self, name: str, description: str, default_value: StrEnum, options: EnumType):
+    def __init__(
+        self, name: str, description: str, default_value: StrEnum, options: EnumType
+    ):
         """
         Initialize an enum generator param.
 
@@ -122,5 +140,3 @@ class EnumParam(GeneratorParam[Enum]):
         """
         super().__init__(name, description, ParamType.Enum, default_value)
         self.options: EnumType = options
-
-
