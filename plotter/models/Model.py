@@ -30,7 +30,6 @@ class Model(Bounded):
         Add a line to this model.
 
         :param line: Line to add
-        :type line: class:`plotter.models.atoms.Line`
         """
         self._lines.append(line)
         self._update_bounding_box(line)
@@ -40,7 +39,6 @@ class Model(Bounded):
         Add a point to this model.
 
         :param point: Point to add
-        :type point: class:`plotter.models.atoms.Point`
         """
         self._points.append(point)
 
@@ -49,7 +47,6 @@ class Model(Bounded):
         Add a sub-model to this model.
 
         :param model: Model to add
-        :type model: class:`plotter.models.Model`
         """
         self._models.append(model)
 
@@ -61,7 +58,6 @@ class Model(Bounded):
         Get the bounding box of the model.
 
         :return: The bounding box of the model
-        :rtype: class:`plotter.models.BoundingBox`
         """
         bounding_box = BoundingBox()
         for line in self._lines:

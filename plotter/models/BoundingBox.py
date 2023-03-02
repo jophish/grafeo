@@ -15,7 +15,6 @@ class BoundingBox:
         Update the current bounds given another bounding box.
 
         :param other: Another bounding box
-        :type other: class:`plotter.models.BoundingBox`
         """
         self.min_x = min(self.min_x, other.min_x)
         self.max_x = max(self.max_x, other.max_x)

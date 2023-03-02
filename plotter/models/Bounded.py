@@ -19,6 +19,5 @@ class Bounded(ABC):
         Get the bounding box of the object.
 
         :return: Bounding box of the object
-        :rtype: class:`plotter.models.BoundingBox`
         """
         pass

@@ -3,6 +3,7 @@ from .Atom import Atom
 from ..BoundingBox import BoundingBox
 from scipy.interpolate import interp1d
 
+
 class Point(Atom):
     """
     The Point class represents an individual point in a scene.
@@ -17,19 +18,13 @@ class Point(Atom):
     :vartype y: float
     """
 
-    x: float
-    y: float
-
     def __init__(self, x: float, y: float, pen: Pen):
         """
         Initialize the point.
 
         :param x: x coordinate of point
-        :type x: float
         :param y: y coordinate of point
-        :type y: float
         :param pen: Pen to associate with the point
-        :type points: class:`plotter.pens.Pen`
         """
         super().__init__(pen=pen)
         self.x = x
@@ -46,11 +41,8 @@ class Point(Atom):
         The pen type of the interpolated point will be the same as the originating point.
 
         :param other: Other point to lerp between
-        :type other: class:`plotter.models.atoms.Point`
         :param ratio: interpolation ratio, clamped between 0-1
-        :type ratio: float
         :return: A new interpolated point
-        :rtype: class:`plotter.models.atoms.Point`
         """
         lerp_x = interp1d([0, 1], [self.x, other.x])(ratio)
         lerp_y = interp1d([0, 1], [self.y, other.y])(ratio)
@@ -61,7 +53,6 @@ class Point(Atom):
         Get the bounding box of the line.
 
         :return: Bounding box of the line
-        :rtype: class:`plotter.models.BoundingBox`
         """
         return BoundingBox(
             min_x=self.x,

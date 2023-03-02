@@ -1,5 +1,10 @@
-from ...pens.Pen import Pen
+from ...pens import Pen
 from ..Bounded import Bounded
+from typing import TypedDict, Unpack
+
+
+class _AtomKwargs(TypedDict):
+    pen: Pen
 
 
 class Atom(Bounded):
@@ -8,13 +13,11 @@ class Atom(Bounded):
 
     This class is intended to be used as a mixin.
 
-    :ivar pen:
-    :vartype pen: class:`plotter.pens.Pen`
+    :ivar pen: The pen associated with this atom
+    :vartype pen: :class:`Pen`
     """
 
-    pen: Pen
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs: Unpack[_AtomKwargs]):
         """
         Initialize an atom.
 
@@ -22,4 +25,4 @@ class Atom(Bounded):
         :type points: class:`plotter.pens.Pen`
         """
         super().__init__(*args, **kwargs)
-        self.pen = kwargs['pen']
+        self.pen: Pen = kwargs['pen']
