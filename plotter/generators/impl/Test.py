@@ -1,53 +1,59 @@
-import math
-import random
-from abc import ABC, abstractmethod
-
-from py5 import Py5Vector
-
-from plotter.utils.hatch import hatch_lines
-from plotter.utils.splines import generate_line, sample_spline
-
-from ..Generator import Generator, ParamList, ParamValues
-from ..Line import Line
+from ..Generator import Generator
+from ..Parameters import GeneratorParamGroup, IntParam
+from ...models import Model
+from ...models.atoms import Line, Point
+from ...pens import Pen
+from typing import Any
 
 
 class Test(Generator):
-    friendly_name = "testing"
+    """
+    Test generator.
 
-    @classmethod
-    def get_friendly_name(cls):
-        return cls.friendly_name
+    :ivar name: The friendly name for this generator
+    :vartype name: str
+    """
 
     def __init__(self):
-        super().__init__()
+        """Initialize the generator."""
+        self.name = 'test'
+        super().__init__(self.name)
 
-    def get_dims(self):
-        return (1000, 1000)
+    def get_default_params(self) -> GeneratorParamGroup:
+        """
+        Get parameters for this generator, set to their defaults.
 
-    def get_param_list(self) -> ParamList:
-        return {
-            "num_lines": ("nl", "Number of lines to draw", "int", 5, 1000),
-            "num_unique_lines": (
-                "nul",
-                "Number of unique lines to lerp between",
-                "int",
-                0,
-                200,
-            ),
-            "unique_line_placement_strategy": (
-                "ulps",
-                "Strategy to use for placing unique lines vertically.",
-                "enum",
-                ["RAND", "UNIFORM"],
-            ),
-        }
+        There are three main types of parameters for this generator:
+        * "Global" parameters, e.g., controlling lines, splines, etc
+        * Parameters controlling x-axis variation
+        * Parameters controlling y-axis variation
 
-    def get_default_params(self) -> ParamValues:
-        return {
-            "num_lines": 200,
-            "num_unique_lines": 5,
-            "unique_line_placement_strategy": "UNIFORM",
-        }
+        :return: The generator's parameters, initialized to their defaults
+        """
+        return GeneratorParamGroup(
+            self.name,
+            [
+                IntParam("num_lines", "Number of lines to draw", 200, 5, 1000),
+                IntParam(
+                    "num_unique_lines",
+                    "Number of unique lines to lerp between",
+                    10,
+                    0,
+                    200,
+                )
+            ]
+        )
 
-    def generate_lines(self, **kwargs):
-        return []
+    def _generate(self, param_dict: dict[str, Any]) -> Model:
+        """
+        Generate a model using the current parameter values.
+
+        :param param_dict: A nested dictionary of the current parameter values
+        :return: A model representing the generated scene
+        """
+        model = Model()
+        model.add_line(Line([
+            Point(0, 0, Pen.One),
+            Point(0, 0, Pen.One)
+        ], Pen.One))
+        return model

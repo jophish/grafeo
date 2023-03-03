@@ -1,6 +1,7 @@
 from abc import ABC
-from enum import Enum, EnumType, StrEnum, auto
-from typing import Generic, TypeVar
+from collections import OrderedDict
+from enum import EnumType, StrEnum, auto
+from typing import Any, Generic, Literal, TypeVar
 
 
 class ParamType(StrEnum):
@@ -12,6 +13,52 @@ class ParamType(StrEnum):
 
 
 T = TypeVar("T")
+
+
+class GeneratorParamGroup:
+    """
+    GeneratorParamGroup is a logical container for an ordered group of generator parameters.
+
+    A parameter group can consist of both lone parameters as well as sub-groups.
+
+    :ivar name: The name of this parameter group
+    :vartype name: str
+    :ivar params: A mapping from param name to param object
+    :vartype params: :class:`OrderedDict`[str, :class:`GeneratorParams` | :class:`GeneratorParamGroup`]
+    """
+
+    def __init__(
+        self, name: str, params: list["GeneratorParam" | "GeneratorParamGroup"]
+    ):
+        """
+        Initialize a param group.
+
+        :param name: The name of this parameter group
+        :param generator_params: The parameters or subgroups in this group
+        """
+        self.name: str = name
+        self.params: OrderedDict[
+            str, GeneratorParam | "GeneratorParamGroup"
+        ] = OrderedDict([(param.name, param) for param in params])
+
+    def reset(self):
+        """Reset all parameter values to their default."""
+        for param in self.params.values():
+            param.reset()
+
+    def get_dict_values(self) -> dict[str, Any]:
+        """
+        Return a nested dictionary containing the current parameter values.
+
+        :return: Nested dictionary containing parameter values
+        """
+        param_dict = {}
+        for name, param in self.params.items():
+            if isinstance(param, GeneratorParamGroup):
+                param_dict[name] = param.get_dict_values()
+            else:
+                param_dict[name] = param.value
+        return param_dict
 
 
 class GeneratorParam(ABC, Generic[T]):
@@ -101,7 +148,7 @@ class FloatParam(GeneratorParam[float]):
         self,
         name: str,
         description: str,
-        default_value: int,
+        default_value: float,
         min_value: float,
         max_value: float,
     ):
@@ -119,16 +166,16 @@ class FloatParam(GeneratorParam[float]):
         self.max_value: float = max_value
 
 
-class EnumParam(GeneratorParam[Enum]):
+class EnumParam(GeneratorParam[str]):
     """
     A parameter taking an enum value.
 
     :ivar options: The options to choose from
-    :vartype options: :class:`EnumType`
+    :vartype options: list[str]
     """
 
     def __init__(
-        self, name: str, description: str, default_value: StrEnum, options: EnumType
+        self, name: str, description: str, default_value: str, options: list[str]
     ):
         """
         Initialize an enum generator param.
@@ -139,4 +186,4 @@ class EnumParam(GeneratorParam[Enum]):
         :param options: The options to choose from
         """
         super().__init__(name, description, ParamType.Enum, default_value)
-        self.options: EnumType = options
+        self.options: list[str] = options

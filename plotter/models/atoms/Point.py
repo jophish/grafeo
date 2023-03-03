@@ -42,7 +42,7 @@ class Point(Atom):
         The pen type of the interpolated point will be the same as the originating point.
 
         :param other: Other point to lerp between
-        :param ratio: interpolation ratio, clamped between 0-1
+        :param ratio: Interpolation ratio
         :return: A new interpolated point
         """
         lerp_x = interp1d([0, 1], [self.x, other.x])(ratio)
@@ -56,3 +56,13 @@ class Point(Atom):
         :return: Bounding box of the line
         """
         return BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)
+
+    def translate(self, x: float, y: float):
+        """
+        Translate the point by x, y.
+
+        :param x: Magnitude in x direction of translation
+        :param y: Magnitude in y direction of translation
+        """
+        self.x += x
+        self.y += y

@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 from ..models.Model import Model
-from .Parameters import GeneratorParam
+from .Parameters import GeneratorParamGroup
 
 
 class Generator(ABC):
@@ -23,7 +23,7 @@ class Generator(ABC):
     :ivar model: The most-recently generated model produced by this generator
     :vartype model: :class:`Model`
     :ivar params: The parameters used for this model
-    :vartype params: :class:`Dict[str, :class:`GeneratorParam`]`
+    :vartype params: :class:`GeneratorParamGroup`
     """
 
     def __init__(self, name: str):
@@ -42,44 +42,30 @@ class Generator(ABC):
 
         This will update the `model` attribute of the generator.
         """
-        self.model = self._generate(**self.params)
+        self.model = self._generate(self.params.get_dict_values())
 
     def reset_params(self):
         """Reset parameter values to defaults."""
-        self.params: Dict[str, GeneratorParam] = self.get_default_params()
-
-    def set_param_value(self, name: str, value: Any):
-        """
-        Set the parameter with the given name to the given value.
-
-        :param name: The name of the parameter to update
-        :param value: The value to update the parameter to
-        """
-        self.params[name].value = value
-
-    def set_param_values(self, values: Dict[str, Any]):
-        """
-        Update the value of multiple parameters at once.
-
-        :param values: Dictionary mapping parameter names to new values
-        """
-        for name, value in values.items():
-            self.params[name].value = value
+        if not self.params:
+            self.params: GeneratorParamGroup = self.get_default_params()
+        else:
+            self.params.reset()
 
     @abstractmethod
-    def _generate(self, **kwargs) -> Model:
+    def _generate(self, param_dict: dict[str, Any]) -> Model:
         """
         Generate a scene using provided parameters.
 
+        :param param_dict: A nested dictionary of the current parameter values
         :return: A model representing the generated scene
         """
         pass
 
     @abstractmethod
-    def get_default_params(self) -> Dict[str, GeneratorParam]:
+    def get_default_params(self) -> GeneratorParamGroup:
         """
         Get the parameters for this generator, initialized to their default values.
 
-        :return: A dictionary mapping parameter names to their associated parameter objects
+        :return: An object describing the generator's parameters
         """
         pass
