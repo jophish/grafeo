@@ -215,9 +215,9 @@ class NoiseLineGenerator(Generator):
         line_distance_rand_amp = param_dict["line_distance_rand_amp"]
         for i in range(num_lines):
             cum_translation_y += round(
-                line_distance +
-                random.randint(-line_distance_rand_amp, line_distance_rand_amp) +
-                param_dict["line_distance_sin_amp"] * math.sin(i * (2 * math.pi) / 20)
+                line_distance
+                + random.randint(-line_distance_rand_amp, line_distance_rand_amp)
+                + param_dict["line_distance_sin_amp"] * math.sin(i * (2 * math.pi) / 20)
             )
             y_offsets.append(cum_translation_y)
 

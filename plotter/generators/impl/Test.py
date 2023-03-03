@@ -1,9 +1,10 @@
-from ..Generator import Generator
-from ..Parameters import GeneratorParamGroup, IntParam
+from typing import Any
+
 from ...models import Model
 from ...models.atoms import Line, Point
 from ...pens import Pen
-from typing import Any
+from ..Generator import Generator
+from ..Parameters import GeneratorParamGroup, IntParam
 
 
 class Test(Generator):
@@ -16,7 +17,7 @@ class Test(Generator):
 
     def __init__(self):
         """Initialize the generator."""
-        self.name = 'test'
+        self.name = "test"
         super().__init__(self.name)
 
     def get_default_params(self) -> GeneratorParamGroup:
@@ -40,8 +41,8 @@ class Test(Generator):
                     10,
                     0,
                     200,
-                )
-            ]
+                ),
+            ],
         )
 
     def _generate(self, param_dict: dict[str, Any]) -> Model:
@@ -52,8 +53,5 @@ class Test(Generator):
         :return: A model representing the generated scene
         """
         model = Model()
-        model.add_line(Line([
-            Point(0, 0, Pen.One),
-            Point(0, 0, Pen.One)
-        ], Pen.One))
+        model.add_line(Line([Point(0, 0, Pen.One), Point(0, 0, Pen.One)], Pen.One))
         return model
