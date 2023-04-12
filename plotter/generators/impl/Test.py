@@ -53,5 +53,5 @@ class Test(Generator):
         :return: A model representing the generated scene
         """
         model = Model()
-        model.add_line(Line([Point(0, 0, Pen.One), Point(0, 0, Pen.One)], Pen.One))
+        model.add_line(Line([Point(0, 0, Pen.One), Point(1, 1, Pen.One)], Pen.One))
         return model

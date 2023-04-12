@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, Union
 
 
 class ParamNotFoundException(Exception):
@@ -46,7 +46,7 @@ class GeneratorParamGroup:
     """
 
     def __init__(
-        self, name: str, params: list["GeneratorParam" | "GeneratorParamGroup"]
+        self, name: str, params: list[Union["GeneratorParam", "GeneratorParamGroup"]]
     ):
         """
         Initialize a param group.
@@ -174,9 +174,9 @@ class GeneratorParam(ABC, Generic[T]):
         :raises WrongParamTypeException: Parameter value has incorrect type
         :raises InvalidParamValueException: Validation checks fail
         """
-        if not type(value) == self.param_type:
+        if not type(value) == self.param_type.value:
             raise WrongParamTypeException(
-                f"Wrong param type for {self.name}. Expected {self.param_type}, got {type(value)} ({value})"
+                f"Wrong param type for {self.name}. Expected {self.param_type.value}, got {type(value)} ({value})"
             )
         self._validate_param_value(value)
         self._value = value

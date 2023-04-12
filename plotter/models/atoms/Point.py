@@ -30,6 +30,7 @@ class Point(Atom):
         super().__init__(pen=pen)
         self.x = x
         self.y = y
+        self._bounding_box = BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)
 
     def lerp(self, other: "Point", ratio: float) -> "Point":
         """
@@ -45,8 +46,8 @@ class Point(Atom):
         :param ratio: Interpolation ratio
         :return: A new interpolated point
         """
-        lerp_x = interp1d([0, 1], [self.x, other.x])(ratio)
-        lerp_y = interp1d([0, 1], [self.y, other.y])(ratio)
+        lerp_x = interp1d([0, 1], [self.x, other.x], fill_value='extrapolate')(ratio)
+        lerp_y = interp1d([0, 1], [self.y, other.y], fill_value='extrapolate')(ratio)
         return Point(lerp_x, lerp_y, self.pen)
 
     def get_bounding_box(self) -> BoundingBox:
@@ -55,7 +56,7 @@ class Point(Atom):
 
         :return: Bounding box of the line
         """
-        return BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)
+        return self._bounding_box
 
     def translate(self, x: float, y: float):
         """
@@ -66,3 +67,15 @@ class Point(Atom):
         """
         self.x += x
         self.y += y
+        self._bounding_box.min_x += x
+        self._bounding_box.max_x += x
+        self._bounding_box.min_y += y
+        self._bounding_box.max_y += y
+
+    def make_bounding_box(self) -> BoundingBox:
+        """
+        Construct a bounding box on the fly.
+
+        :return: The point's bounding box
+        """
+        return BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)

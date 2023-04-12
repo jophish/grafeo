@@ -42,11 +42,14 @@ class Generator(ABC):
 
         This will update the `model` attribute of the generator.
         """
+        self.model = Model()
         self.model = self._generate(self.params.get_dict_values())
+        self.model.normalize()
+        return self.model
 
     def reset_params(self):
         """Reset parameter values to defaults."""
-        if not self.params:
+        if not hasattr(self, 'params'):
             self.params: GeneratorParamGroup = self.get_default_params()
         else:
             self.params.reset()

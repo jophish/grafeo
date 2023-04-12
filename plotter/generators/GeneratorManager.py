@@ -1,51 +1,54 @@
 from plotter.generators.impl import generators
+from .Generator import Generator
+from .Parameters import GeneratorParamGroup
+from typing import Any
+from ..models import Model
 
 
 class GeneratorManager:
-    generators = {}
-    current_generator = None
+    """
+    The GeneratorManager class is an interface for managing and organizing information about available generators.
+
+    :ivar generators: A mapping from generator name to generator instances
+    :vartype generators: dict[str, :class:`Generator`]
+    :ivar current_generator: The currently selected generator
+    :vartype current_generator: :class:`Generator`
+    """
 
     def __init__(self):
+        """Initialize a generator manager."""
         self._init_generators_with_defaults()
 
-    def get_generator_defaults(self):
+    def get_generator_defaults(self) -> dict[str, GeneratorParamGroup]:
+        """
+        Get default parameters for all generators.
+
+        :return: A dictionary mapping generator name to its default parameter object
+        """
         generator_defaults = {}
         for generator_name, generator in self.generators.items():
             generator_defaults[generator_name] = generator.get_default_params()
         return generator_defaults
 
     def _init_generators_with_defaults(self):
-        for generator_name, generator in generators.items():
-            self.generators[generator_name] = generator()
+        """Initialize the class instance with default-valued generators."""
+        self.generators: dict[str, Generator] = {}
+        for generator in generators.values():
+            init_generator = generator()
+            self.generators[init_generator.name] = init_generator
 
-    def get_generator_friendly_names(self):
-        return [generator.get_friendly_name() for generator in self.generators.values()]
+    def get_generator_names(self):
+        return [generator.name for generator in self.generators.values()]
 
-    def set_current_generator(self, generator_name):
-        self.current_generator = self.generators[generator_name]
+    def set_current_generator(self, name):
+        self.current_generator = self.generators[name]
 
-    def set_all_generator_param_values(self, all_generator_param_values):
-        for generator_name, param_values in all_generator_param_values.items():
-            self.generators[generator_name].set_param_values(param_values)
-
-    def set_current_generator_by_friendly_name(self, friendly_name):
-        for generator in self.generators.values():
-            if generator.get_friendly_name() == friendly_name:
-                self.current_generator = generator
-                return
-        raise Exception(f'No generator found with friendly name "{friendly_name}"')
-
-    def get_name_by_friendly_name(self, friendly_name):
-        for generator_name, generator in self.generators.items():
-            if generator.get_friendly_name() == friendly_name:
-                return generator_name
-        raise Exception(f'No generator found with friendly name "{friendly_name}"')
+    def set_all_generator_param_values(self, all_generator_param_values: dict[str, dict[str, Any]]):
+        for name, param_values in all_generator_param_values.items():
+            self.generators[name].params.set_dict_values(param_values)
 
     def get_current_generator_param_value(self, param_name):
         return self.current_generator.get_param_values()[param_name]
 
-    def get_current_generator_dims(self):
-        return self.current_generator.get_dims()
-
-    def generate_current(self):
+    def generate_current(self) -> Model:
         return self.current_generator.generate()

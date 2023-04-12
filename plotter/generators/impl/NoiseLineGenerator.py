@@ -56,7 +56,7 @@ class NoiseLineGenerator(Generator):
                 EnumParam(
                     "unique_line_placement_strategy",
                     "Strategy to use for placing unique lines vertically",
-                    UniqueLinePlacementStrategy.Uniform,
+                    str(UniqueLinePlacementStrategy.Uniform),
                     [x.value for x in UniqueLinePlacementStrategy],
                 ),
                 IntParam(

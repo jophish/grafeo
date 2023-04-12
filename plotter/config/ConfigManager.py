@@ -1,6 +1,8 @@
 import json
 import os
 from pathlib import Path
+from ..generators import GeneratorParamGroup, Generator
+from typing import Any
 
 CONFIG_FILENAME = "pyplot.json"
 CONFIG_PATH = os.path.join(
@@ -9,8 +11,11 @@ CONFIG_PATH = os.path.join(
 
 
 class ConfigManager:
-    def __init__(self, generator_defaults):
-        self.generator_defaults = generator_defaults
+    """The ConfigManager class syncs configuration data between disk and memory."""
+
+    def __init__(self, generator_defaults: dict[str, GeneratorParamGroup]):
+        """Initialize a config manager."""
+        self.generator_defaults: dict[str, GeneratorParamGroup] = generator_defaults
         self._init_config()
 
     def _init_config(self):
@@ -20,6 +25,12 @@ class ConfigManager:
             self.load_config()
 
     def load_config(self):
+        """
+        Load config from disk into memory.
+
+        If a generator does not exist on disk during loading, the config on disk will be
+        updated with the defaults from the missing generator.
+        """
         with open(CONFIG_PATH) as f:
             self.config = json.load(f)
 
@@ -29,33 +40,48 @@ class ConfigManager:
             if generator_name not in self.config["generator_params"]:
                 self.config["generator_params"][
                     generator_name
-                ] = self.generator_defaults[generator_name]
+                ] = self.generator_defaults[generator_name].get_dict_values()
         self.write_config_to_disk()
 
     def write_config_to_disk(self):
+        """Write in-memory config to disk."""
         with open(CONFIG_PATH, "w") as f:
             f.write(json.dumps(self.config, indent=4))
 
     def get_current_generator(self):
+        """Get the name of the current generator."""
         return self.config["current_generator"]
 
     def set_current_generator(self, generator_name):
+        """Set the name of the current_generator."""
         self.config["current_generator"] = generator_name
         self.write_config_to_disk()
 
-    def set_param_value(self, param_name, param_value):
-        current_generator = self.config["current_generator"]
-        self.config["generator_params"][current_generator][param_name] = param_value
+    def set_generator_params(self, generator: Generator):
+        """
+        Update the config for an entire generator.
+
+        :param generator: The generator whose config to update.
+        """
+        self.config["generator_params"][generator.name] = generator.params.get_dict_values()
         self.write_config_to_disk()
 
-    def get_all_generator_param_values(self):
+    def get_all_generator_param_values(self) -> dict[str, dict[str, Any]]:
+        """
+        Get all generator param values from the config.
+
+        :return: A dictionary mapping generator names to param dictionaries.
+        """
         return self.config["generator_params"]
+
+    def _get_all_defaults(self) -> dict[str, dict[str, Any]]:
+        return {name: generator_params.get_dict_values() for name, generator_params in self.generator_defaults.items()}
 
     def _write_default_config(self):
         # Get default configs from each generator
         default_generator = list(self.generator_defaults.keys())[0]
         default_config = {
-            "generator_params": self.generator_defaults,
+            "generator_params": self._get_all_defaults(),
             "generator_pen_maps": {},
             "serial": {
                 "port": "/dev/ttyUSB0",

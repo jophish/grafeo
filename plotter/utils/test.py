@@ -1,7 +1,6 @@
 import math
 from random import randint
 
-import matplotlib.pyplot as plt
 import numpy as np
 from py5 import Py5Vector
 from scipy.interpolate import splev, splprep

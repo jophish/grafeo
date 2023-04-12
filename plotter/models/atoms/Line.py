@@ -24,6 +24,39 @@ class Line(Atom):
         super().__init__(pen=pen)
         self.points = points
         self.pen = pen
+        self._bounding_box = self._make_bounding_box()
+
+    def _make_bounding_box(self) -> BoundingBox:
+        """
+        Construct a bounding box on the fly.
+
+        :return: The line's bounding box
+        """
+        bounding_box = BoundingBox()
+        for point in self.points:
+            bounding_box.update(point.get_bounding_box())
+
+        return bounding_box
+
+    def make_bounding_box(self) -> BoundingBox:
+        """
+        Construct a bounding box on the fly.
+
+        :return: The line's bounding box
+        """
+        bounding_box = BoundingBox()
+        for point in self.points:
+            bounding_box.update(point.make_bounding_box())
+        return bounding_box
+
+    def add_point(self, point: Point):
+        """
+        Add a point to the line.
+
+        :param point: Point to add.
+        """
+        self.points.append(point)
+        self._bounding_box.update(point.get_bounding_box())
 
     def get_bounding_box(self) -> BoundingBox:
         """
@@ -31,10 +64,7 @@ class Line(Atom):
 
         :return: Bounding box of the line
         """
-        bounding_box = BoundingBox()
-        for point in self.points:
-            bounding_box.update(point.get_bounding_box())
-        return bounding_box
+        return self._bounding_box
 
     def translate(self, x: float, y: float):
         """
@@ -43,7 +73,12 @@ class Line(Atom):
         :param x: Magnitude in x direction of translation
         :param y: Magnitude in y direction of translation
         """
-        (point.translate(x, y) for point in self.points)
+        for point in self.points:
+            point.translate(x, y)
+        self._bounding_box.min_x += x
+        self._bounding_box.max_x += x
+        self._bounding_box.min_y += y
+        self._bounding_box.max_y += y
 
     def lerp(self, other: "Line", ratio: float):
         """

@@ -4,6 +4,7 @@ from plotter.gui.gui import setup_gui
 
 
 def main():
+    """Run the program."""
     generator_manager = GeneratorManager()
     config_manager = ConfigManager(generator_manager.get_generator_defaults())
     generator_manager.set_all_generator_param_values(

@@ -1,13 +1,14 @@
-import array
+import faulthandler
 
-import cv2
 import dearpygui.dearpygui as dpg
-from skimage.transform import rescale, resize
+from dearpygui.dearpygui import add_button, start_dearpygui
 
-from plotter.config.ConfigManager import ConfigManager
-from plotter.generators.GeneratorManager import GeneratorManager
+from plotter.generators.Parameters import (EnumParam, FloatParam,
+                                           GeneratorParam, GeneratorParamGroup,
+                                           IntParam)
 from plotter.renderer.Renderer import Renderer
 
+faulthandler.enable()
 # On startup:
 # - Initialize config
 #   - If no config file is found, create a config file at CONFIG_PATH with default values.
@@ -35,42 +36,46 @@ MIN_VIEWPORT_HEIGHT = 1000
 
 
 def select_generator_callback(sender, app_data, user_data):
-    user_data["generator_manager"].set_current_generator_by_friendly_name(app_data)
-    generator_name = user_data["generator_manager"].get_name_by_friendly_name(app_data)
-    user_data["config_manager"].set_current_generator(generator_name)
+    user_data["generator_manager"].set_current_generator(app_data)
+    user_data["config_manager"].set_current_generator(app_data)
     dpg.delete_item("parameters", children_only=True)
     make_parameter_items(user_data)
 
 
 def update_parameter_callback(sender, app_data, user_data):
-    param_name = user_data["param_name"]
     managers = user_data["managers"]
-    managers["config_manager"].set_param_value(param_name, app_data)
-    managers["generator_manager"].current_generator.set_param_value(
-        param_name, app_data
-    )
+    user_data['param'].value = app_data
+    managers["config_manager"].set_generator_params(managers['generator_manager'].current_generator)
 
 
 def render_callback(sender, app_data, user_data):
     try:
+        print('render 0')
         dpg.configure_item("render_button_tag", enabled=False)
-        current_dims = user_data["generator_manager"].get_current_generator_dims()
-        lines = user_data["generator_manager"].generate_current()
-        render_data = user_data["renderer"].render(
-            lines, current_dims[0], current_dims[1]
-        )
+        model = user_data["generator_manager"].generate_current()
+        print('render 0.1')
+        render_data = user_data["renderer"].render(model)
+
         dpg.set_value("render_texture_tag", render_data["data"])
         dpg.configure_item(
             "render_texture_tag",
             width=render_data["width"],
             height=render_data["height"],
         )
-        canvas_width, canvas_height = user_data[
-            "generator_manager"
-        ].current_generator.get_dims()
+
+        print(render_data["width"], render_data["height"])
+        print(render_data['height'], render_data['width'])
+        print('render 1')
+        bounding_box = model.get_bounding_box()
+        print('render 1.1')
+        canvas_width = bounding_box.max_x - bounding_box.min_x
+        canvas_height = bounding_box.max_y - bounding_box.min_y
         window_width, window_height = dpg.get_item_rect_size("Window")
+        print('render 1.2')
         max_render_width = window_width - LEFT_PANEL_WIDTH - 50
         max_render_height = window_height - 50
+
+        print('render 2')
         scale = min(
             1, max_render_width / canvas_width, max_render_height / canvas_height
         )
@@ -78,12 +83,50 @@ def render_callback(sender, app_data, user_data):
             "render_image_tag", width=canvas_width * scale, height=canvas_height * scale
         )
         dpg.configure_item("render_button_tag", enabled=True)
-    except:
+        print('render 3')
+    except Exception as e:
+        print(e)
         print("error while attempting to render")
     finally:
         dpg.configure_item("render_button_tag", enabled=True)
 
 
+def make_param_group(managers, param_group):
+    for name, param in param_group.params.items():
+        if isinstance(param, GeneratorParamGroup):
+            make_param_group(managers, param)
+        elif isinstance(param, GeneratorParam):
+            with dpg.table_row():
+                with dpg.table_cell():
+                    user_data = {"param": param, "managers": managers}
+                    current_param_value = param.value
+                    dpg.add_text(default_value=name, color=(204, 36, 29))
+                    dpg.add_text(
+                        default_value=param.description, wrap=LEFT_PANEL_TEXT_WRAP
+                    )
+                    if isinstance(param, IntParam):
+                        dpg.add_slider_int(
+                            user_data=user_data,
+                            callback=update_parameter_callback,
+                            min_value=param.min_value,
+                            max_value=param.max_value,
+                            default_value=current_param_value,
+                        )
+                    elif isinstance(param, FloatParam):
+                        dpg.add_slider_float(
+                            user_data=user_data,
+                            callback=update_parameter_callback,
+                            min_value=param.min_value,
+                            max_value=param.max_value,
+                            default_value=current_param_value,
+                        )
+                    elif isinstance(param, EnumParam):
+                        dpg.add_combo(
+                            items=param.options,
+                            user_data=user_data,
+                            callback=update_parameter_callback,
+                            default_value=current_param_value,
+                        )
 def make_parameter_items(managers):
     current_generator = managers["generator_manager"].current_generator
 
@@ -95,7 +138,8 @@ def make_parameter_items(managers):
         parent="parameters",
     )
 
-    param_list = current_generator.get_param_list()
+    param_group = current_generator.params
+
     with dpg.table(
         header_row=False,
         parent="parameters",
@@ -105,52 +149,21 @@ def make_parameter_items(managers):
         borders_outerV=False,
     ):
         dpg.add_table_column()
-
-        for param_name, param_details in param_list.items():
-            with dpg.table_row():
-                with dpg.table_cell():
-                    user_data = {"param_name": param_name, "managers": managers}
-                    current_param_value = managers[
-                        "generator_manager"
-                    ].get_current_generator_param_value(param_name)
-                    dpg.add_text(default_value=param_name, color=(204, 36, 29))
-                    dpg.add_text(
-                        default_value=param_details[1], wrap=LEFT_PANEL_TEXT_WRAP
-                    )
-                    if param_details[2] == "int":
-                        dpg.add_slider_int(
-                            user_data=user_data,
-                            callback=update_parameter_callback,
-                            min_value=param_details[3],
-                            max_value=param_details[4],
-                            default_value=current_param_value,
-                        )
-                    elif param_details[2] == "float":
-                        dpg.add_slider_float(
-                            user_data=user_data,
-                            callback=update_parameter_callback,
-                            min_value=param_details[3],
-                            max_value=param_details[4],
-                            default_value=current_param_value,
-                        )
-                    elif param_details[2] == "enum":
-                        dpg.add_combo(
-                            items=param_details[3],
-                            user_data=user_data,
-                            callback=update_parameter_callback,
-                            default_value=current_param_value,
-                        )
+        make_param_group(managers, param_group)
 
 
 def resize_window(sender, app_data, user_data):
-    canvas_width, canvas_height = user_data[
+    model = user_data[
         "generator_manager"
-    ].current_generator.get_dims()
-
+    ].current_generator.model
+    bounding_box = model.get_bounding_box()
+    canvas_width = bounding_box.max_x - bounding_box.min_x
+    canvas_height = bounding_box.max_y - bounding_box.min_y
     window_width, window_height = dpg.get_item_rect_size("Window")
     max_render_width = window_width - LEFT_PANEL_WIDTH - 50
     max_render_height = window_height - 50
     scale = min(1, max_render_width / canvas_width, max_render_height / canvas_height)
+    # print(canvas_width, canvas_height, window_width, window_height, max_render_width, max_render_height, canvas_width*scale, canvas_height*scale)
     dpg.configure_item(
         "render_image_tag", width=canvas_width * scale, height=canvas_height * scale
     )
@@ -225,10 +238,10 @@ def setup_gui(managers):
                         label="generator",
                         items=managers[
                             "generator_manager"
-                        ].get_generator_friendly_names(),
+                        ].get_generator_names(),
                         default_value=managers[
                             "generator_manager"
-                        ].current_generator.get_friendly_name(),
+                        ].current_generator.name,
                         user_data=managers,
                         callback=select_generator_callback,
                     )
@@ -263,13 +276,8 @@ def setup_gui(managers):
                         with dpg.texture_registry(
                             show=False, tag="texture_registry_tag"
                         ):
-                            current_dims = managers[
-                                "generator_manager"
-                            ].get_current_generator_dims()
-                            lines = managers["generator_manager"].generate_current()
-                            render_data = renderer.render(
-                                lines, current_dims[0], current_dims[1]
-                            )
+                            model = managers["generator_manager"].generate_current()
+                            render_data = renderer.render(model)
                             dpg.add_raw_texture(
                                 width=render_data["width"],
                                 height=render_data["height"],
@@ -277,6 +285,7 @@ def setup_gui(managers):
                                 format=dpg.mvFormat_Float_rgba,
                                 tag="render_texture_tag",
                             )
+
                         dpg.add_image(
                             "render_texture_tag",
                             width=0,
