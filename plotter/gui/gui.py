@@ -1,4 +1,4 @@
-import faulthandler
+import math
 
 import dearpygui.dearpygui as dpg
 from dearpygui.dearpygui import add_button, start_dearpygui
@@ -7,8 +7,8 @@ from plotter.generators.Parameters import (EnumParam, FloatParam,
                                            GeneratorParam, GeneratorParamGroup,
                                            IntParam)
 from plotter.renderer.Renderer import Renderer
+from ..tracemalloc import display_top
 
-faulthandler.enable()
 # On startup:
 # - Initialize config
 #   - If no config file is found, create a config file at CONFIG_PATH with default values.
@@ -34,7 +34,6 @@ LEFT_PANEL_TEXT_WRAP = LEFT_PANEL_WIDTH - LEFT_PANEL_MARGIN
 MIN_VIEWPORT_WIDTH = 1000
 MIN_VIEWPORT_HEIGHT = 1000
 
-
 def select_generator_callback(sender, app_data, user_data):
     user_data["generator_manager"].set_current_generator(app_data)
     user_data["config_manager"].set_current_generator(app_data)
@@ -47,49 +46,55 @@ def update_parameter_callback(sender, app_data, user_data):
     user_data['param'].value = app_data
     managers["config_manager"].set_generator_params(managers['generator_manager'].current_generator)
 
-
 def render_callback(sender, app_data, user_data):
     try:
-        print('render 0')
         dpg.configure_item("render_button_tag", enabled=False)
-        model = user_data["generator_manager"].generate_current()
-        print('render 0.1')
-        render_data = user_data["renderer"].render(model)
-
-        dpg.set_value("render_texture_tag", render_data["data"])
-        dpg.configure_item(
-            "render_texture_tag",
-            width=render_data["width"],
-            height=render_data["height"],
-        )
-
-        print(render_data["width"], render_data["height"])
-        print(render_data['height'], render_data['width'])
-        print('render 1')
-        bounding_box = model.get_bounding_box()
-        print('render 1.1')
-        canvas_width = bounding_box.max_x - bounding_box.min_x
-        canvas_height = bounding_box.max_y - bounding_box.min_y
-        window_width, window_height = dpg.get_item_rect_size("Window")
-        print('render 1.2')
-        max_render_width = window_width - LEFT_PANEL_WIDTH - 50
-        max_render_height = window_height - 50
-
-        print('render 2')
-        scale = min(
-            1, max_render_width / canvas_width, max_render_height / canvas_height
-        )
-        dpg.configure_item(
-            "render_image_tag", width=canvas_width * scale, height=canvas_height * scale
-        )
-        dpg.configure_item("render_button_tag", enabled=True)
-        print('render 3')
+        render_and_update(user_data)
     except Exception as e:
         print(e)
         print("error while attempting to render")
+        raise e
     finally:
         dpg.configure_item("render_button_tag", enabled=True)
 
+
+texture_tags = []
+
+def render_and_update(managers):
+    model = managers["generator_manager"].generate_current()
+    render_data = managers["renderer"].render(model)
+    bounding_box = model.get_bounding_box()
+
+    canvas_width = bounding_box.max_x - bounding_box.min_x
+    canvas_height = bounding_box.max_y - bounding_box.min_y
+    window_width, window_height = dpg.get_item_rect_size("Window")
+
+    max_render_width = window_width - LEFT_PANEL_WIDTH - 50
+    max_render_height = window_height - 50
+
+    scale = min(
+        1, max_render_width / canvas_width, max_render_height / canvas_height
+    )
+
+    with dpg.texture_registry(show=False):
+        texture = dpg.add_dynamic_texture(
+            render_data["width"],
+            render_data["height"],
+            default_value=render_data["data"],
+        )
+        texture_tags.append(texture)
+        if dpg.does_item_exist('output_tag'):
+            dpg.delete_item('output_tag', children_only=True)
+        dpg.add_image(
+            texture,
+            width=math.ceil(canvas_width * scale),
+            height=math.ceil(canvas_height * scale),
+            parent="output_tag",
+            tag='render_image_tag'
+        )
+    for tag in texture_tags:
+        if tag != texture and dpg.does_item_exist(tag):
+            dpg.set_value(tag, [])
 
 def make_param_group(managers, param_group):
     for name, param in param_group.params.items():
@@ -171,6 +176,9 @@ def resize_window(sender, app_data, user_data):
 
 def setup_gui(managers):
     dpg.create_context()
+    dpg.create_viewport(title="Custom Title")
+    dpg.setup_dearpygui()
+
     dpg.set_global_font_scale(1)
     renderer = Renderer(None, None)
     managers["renderer"] = renderer
@@ -272,26 +280,8 @@ def setup_gui(managers):
             # Middle Pane
             with dpg.group(tag="middle"):
                 with dpg.tab_bar():
-                    with dpg.tab(label="output"):
-                        with dpg.texture_registry(
-                            show=False, tag="texture_registry_tag"
-                        ):
-                            model = managers["generator_manager"].generate_current()
-                            render_data = renderer.render(model)
-                            dpg.add_raw_texture(
-                                width=render_data["width"],
-                                height=render_data["height"],
-                                default_value=render_data["data"],
-                                format=dpg.mvFormat_Float_rgba,
-                                tag="render_texture_tag",
-                            )
-
-                        dpg.add_image(
-                            "render_texture_tag",
-                            width=0,
-                            height=0,
-                            tag="render_image_tag",
-                        )
+                    with dpg.tab(label="output", tag="output_tag"):
+                        pass
                     with dpg.tab(label="print preview"):
                         pass
 
@@ -303,11 +293,10 @@ def setup_gui(managers):
         #     with dpg.collapsing_header(label='test'):
         #         dpg.add_button(label='test')
 
+    render_and_update(managers)
     dpg.bind_item_handler_registry("Window", "window_handler")
     dpg.bind_theme(global_theme)
-    dpg.create_viewport(title="Custom Title")
     dpg.set_primary_window("Window", True)
-    dpg.setup_dearpygui()
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()

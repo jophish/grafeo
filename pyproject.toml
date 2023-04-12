@@ -6,7 +6,7 @@ authors = ["Joseph Bergeron <jophish126@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.12"
 py5 = "^0.8.3a1"
 pyserial = "^3.5"
 numpy = "^1.24.2"
@@ -14,7 +14,7 @@ scipy = "^1.10.1"
 matplotlib = "^3.7.0"
 shapely = "^2.0.1"
 more-itertools = "^9.0.0"
-dearpygui = "^1.8.0"
+dearpygui = "^1.9.0"
 opencv-python = "^4.7.0.72"
 scikit-image = "^0.19.3"
 pycairo = "^1.23.0"
