@@ -58,7 +58,7 @@ def render_callback(sender, app_data, user_data):
         dpg.configure_item("render_button_tag", enabled=True)
 
 
-texture_tags = []
+texture_map = {}
 
 def render_and_update(managers):
     model = managers["generator_manager"].generate_current()
@@ -82,7 +82,7 @@ def render_and_update(managers):
             render_data["height"],
             default_value=render_data["data"],
         )
-        texture_tags.append(texture)
+        texture_map[texture] = render_data['data']
         if dpg.does_item_exist('output_tag'):
             dpg.delete_item('output_tag', children_only=True)
         dpg.add_image(
@@ -92,9 +92,10 @@ def render_and_update(managers):
             parent="output_tag",
             tag='render_image_tag'
         )
-    for tag in texture_tags:
+    for tag, data in list(texture_map.items()):
         if tag != texture and dpg.does_item_exist(tag):
-            dpg.set_value(tag, [])
+            del data
+            del texture_map[tag]
 
 def make_param_group(managers, param_group):
     for name, param in param_group.params.items():

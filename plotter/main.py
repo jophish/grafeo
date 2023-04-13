@@ -2,9 +2,6 @@ from plotter.config.ConfigManager import ConfigManager
 from plotter.generators.GeneratorManager import GeneratorManager
 from plotter.gui.gui import setup_gui
 
-import tracemalloc
-
-tracemalloc.start()
 
 def main():
     """Run the program."""
@@ -19,6 +16,5 @@ def main():
         "config_manager": config_manager,
     }
     setup_gui(managers)
-
 
 main()
