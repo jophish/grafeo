@@ -1,8 +1,10 @@
+from typing import Any
+
 from plotter.generators.impl import generators
+
+from ..models import Model
 from .Generator import Generator
 from .Parameters import GeneratorParamGroup
-from typing import Any
-from ..models import Model
 
 
 class GeneratorManager:
@@ -43,7 +45,9 @@ class GeneratorManager:
     def set_current_generator(self, name):
         self.current_generator = self.generators[name]
 
-    def set_all_generator_param_values(self, all_generator_param_values: dict[str, dict[str, Any]]):
+    def set_all_generator_param_values(
+        self, all_generator_param_values: dict[str, dict[str, Any]]
+    ):
         for name, param_values in all_generator_param_values.items():
             self.generators[name].params.set_dict_values(param_values)
 

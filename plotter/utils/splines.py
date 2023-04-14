@@ -36,9 +36,11 @@ def generate_line(
 
         frac = i / n_points
         new_x_rand_amp = round(x_rand_amp ** (1 + frac * x_rand_amp_exp))
-        x += math.sin(abs(x_sin_freq * x ** (1 + frac * x_sin_freq_exp))) * x_sin_amp ** (
-            1 + frac * x_sin_amp_exp
-        ) + randint(-new_x_rand_amp, new_x_rand_amp)
+        x += math.sin(
+            abs(x_sin_freq * x ** (1 + frac * x_sin_freq_exp))
+        ) * x_sin_amp ** (1 + frac * x_sin_amp_exp) + randint(
+            -new_x_rand_amp, new_x_rand_amp
+        )
 
         new_y_rand_amp = round(y_rand_amp ** (1 + frac * y_rand_amp_exp))
         y = (

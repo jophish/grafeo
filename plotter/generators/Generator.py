@@ -49,7 +49,7 @@ class Generator(ABC):
 
     def reset_params(self):
         """Reset parameter values to defaults."""
-        if not hasattr(self, 'params'):
+        if not hasattr(self, "params"):
             self.params: GeneratorParamGroup = self.get_default_params()
         else:
             self.params.reset()

@@ -1,6 +1,7 @@
 from plotter.config.ConfigManager import ConfigManager
 from plotter.generators.GeneratorManager import GeneratorManager
 from plotter.gui.gui import setup_gui
+from plotter.gui.Gui import Gui
 
 
 def main():
@@ -17,4 +18,6 @@ def main():
     }
     setup_gui(managers)
 
-main()
+
+gui = Gui()
+gui.start()

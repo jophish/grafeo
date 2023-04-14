@@ -1,9 +1,10 @@
+import math
+
 import cairo
 import numpy
 
 from plotter.models import Model
 from plotter.models.atoms import Line
-import math
 
 MAX_RENDER_WIDTH = 3000
 MAX_RENDER_HEIGHT = 3000
@@ -14,6 +15,7 @@ class Renderer:
         super().__init__()
         self.pen_config = pen_config
         self.pen_mapping = pen_mapping
+        self.render_data = None
 
     def set_scale_factor(self, width, height):
         self.scale = min(1, MAX_RENDER_WIDTH / width, MAX_RENDER_HEIGHT / height)
@@ -33,7 +35,7 @@ class Renderer:
 
         self.ctx = cairo.Context(surface)
         self.ctx.save()
-        self.ctx.set_source_rgb(1, 1, 1)
+        self.ctx.set_source_rgba(1, 1, 1, 0.0)
         self.ctx.paint()
         self.ctx.restore()
 
@@ -42,7 +44,8 @@ class Renderer:
 
         data_view = data.view(numpy.uint8).reshape((h * w * 4)).astype(numpy.float32)
         data_view /= 255
-        return {"data": data_view, "height": h, "width": w}
+        self.render_data = {"data": data_view, "height": h, "width": w}
+        return self.render_data
 
     def draw_line(self, line: Line):
         points = line.points
@@ -50,7 +53,9 @@ class Renderer:
             return
         self.ctx.set_line_width(1)
         self.ctx.set_source_rgb(0, 0, 0)
-        self.ctx.move_to(round(points[0].x * self.scale), round(points[0].y * self.scale))
+        self.ctx.move_to(
+            round(points[0].x * self.scale), round(points[0].y * self.scale)
+        )
         for point in points:
             self.ctx.line_to(round(point.x * self.scale), round(point.y * self.scale))
         self.ctx.stroke()

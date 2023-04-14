@@ -1,8 +1,9 @@
 import json
 import os
 from pathlib import Path
-from ..generators import GeneratorParamGroup, Generator
 from typing import Any
+
+from ..generators import Generator, GeneratorParamGroup
 
 CONFIG_FILENAME = "pyplot.json"
 CONFIG_PATH = os.path.join(
@@ -63,7 +64,9 @@ class ConfigManager:
 
         :param generator: The generator whose config to update.
         """
-        self.config["generator_params"][generator.name] = generator.params.get_dict_values()
+        self.config["generator_params"][
+            generator.name
+        ] = generator.params.get_dict_values()
         self.write_config_to_disk()
 
     def get_all_generator_param_values(self) -> dict[str, dict[str, Any]]:
@@ -75,7 +78,28 @@ class ConfigManager:
         return self.config["generator_params"]
 
     def _get_all_defaults(self) -> dict[str, dict[str, Any]]:
-        return {name: generator_params.get_dict_values() for name, generator_params in self.generator_defaults.items()}
+        return {
+            name: generator_params.get_dict_values()
+            for name, generator_params in self.generator_defaults.items()
+        }
+
+    def get_print_settings(self) -> dict[str, Any]:
+        """
+        Return the current print settings.
+
+        :return: Current print settings
+        """
+        return self.config["print_settings"]
+
+    def update_print_setting(self, name: str, value: Any):
+        """
+        Update an individual print setting.
+
+        :param name: Name of parameter to update
+        :param value: Value of parameter to update
+        """
+        self.config["print_settings"][name] = value
+        self.write_config_to_disk()
 
     def _write_default_config(self):
         # Get default configs from each generator
@@ -101,6 +125,16 @@ class ConfigManager:
                 }
             ],
             "current_generator": default_generator,
+            "print_settings": {
+                "margin_x": 500,
+                "margin_y": 500,
+                "max_x_coord": 16640,
+                "max_y_coord": 10720,
+                "scale": 0.5,
+                "rotation": 0,
+                "translate_x": 0,
+                "translate_y": 0,
+            },
         }
         self.config = default_config
         self.write_config_to_disk()

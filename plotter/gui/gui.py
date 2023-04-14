@@ -1,12 +1,16 @@
 import math
 
 import dearpygui.dearpygui as dpg
-from dearpygui.dearpygui import add_button, start_dearpygui
 
-from plotter.generators.Parameters import (EnumParam, FloatParam,
-                                           GeneratorParam, GeneratorParamGroup,
-                                           IntParam)
+from plotter.generators.Parameters import (
+    EnumParam,
+    FloatParam,
+    GeneratorParam,
+    GeneratorParamGroup,
+    IntParam,
+)
 from plotter.renderer.Renderer import Renderer
+
 from ..tracemalloc import display_top
 
 # On startup:
@@ -34,6 +38,7 @@ LEFT_PANEL_TEXT_WRAP = LEFT_PANEL_WIDTH - LEFT_PANEL_MARGIN
 MIN_VIEWPORT_WIDTH = 1000
 MIN_VIEWPORT_HEIGHT = 1000
 
+
 def select_generator_callback(sender, app_data, user_data):
     user_data["generator_manager"].set_current_generator(app_data)
     user_data["config_manager"].set_current_generator(app_data)
@@ -43,13 +48,58 @@ def select_generator_callback(sender, app_data, user_data):
 
 def update_parameter_callback(sender, app_data, user_data):
     managers = user_data["managers"]
-    user_data['param'].value = app_data
-    managers["config_manager"].set_generator_params(managers['generator_manager'].current_generator)
+    user_data["param"].value = app_data
+    managers["config_manager"].set_generator_params(
+        managers["generator_manager"].current_generator
+    )
+
+
+should_render = False
+
 
 def render_callback(sender, app_data, user_data):
+    global should_render
+    should_render = True
+
+
+def render_and_update(managers):
     try:
         dpg.configure_item("render_button_tag", enabled=False)
-        render_and_update(user_data)
+        model = managers["generator_manager"].generate_current()
+        render_data = managers["renderer"].render(model)
+        bounding_box = model.get_bounding_box()
+
+        canvas_width = bounding_box.max_x - bounding_box.min_x
+        canvas_height = bounding_box.max_y - bounding_box.min_y
+        window_width, window_height = dpg.get_item_rect_size("Window")
+
+        max_render_width = window_width - LEFT_PANEL_WIDTH - 50
+        max_render_height = window_height - 50
+
+        scale = min(
+            1, max_render_width / canvas_width, max_render_height / canvas_height
+        )
+
+        if dpg.does_item_exist("image_tag"):
+            dpg.delete_item("image_tag")
+        if dpg.does_item_exist("texture_tag"):
+            dpg.delete_item("texture_tag")
+
+        with dpg.texture_registry(show=False):
+            dpg.add_dynamic_texture(
+                render_data["width"],
+                render_data["height"],
+                default_value=render_data["data"],
+                tag="texture_tag",
+            )
+            dpg.add_image(
+                "texture_tag",
+                width=math.ceil(canvas_width * scale),
+                height=math.ceil(canvas_height * scale),
+                parent="output_tag",
+                tag="image_tag",
+            )
+
     except Exception as e:
         print(e)
         print("error while attempting to render")
@@ -57,45 +107,6 @@ def render_callback(sender, app_data, user_data):
     finally:
         dpg.configure_item("render_button_tag", enabled=True)
 
-
-texture_map = {}
-
-def render_and_update(managers):
-    model = managers["generator_manager"].generate_current()
-    render_data = managers["renderer"].render(model)
-    bounding_box = model.get_bounding_box()
-
-    canvas_width = bounding_box.max_x - bounding_box.min_x
-    canvas_height = bounding_box.max_y - bounding_box.min_y
-    window_width, window_height = dpg.get_item_rect_size("Window")
-
-    max_render_width = window_width - LEFT_PANEL_WIDTH - 50
-    max_render_height = window_height - 50
-
-    scale = min(
-        1, max_render_width / canvas_width, max_render_height / canvas_height
-    )
-
-    with dpg.texture_registry(show=False):
-        texture = dpg.add_dynamic_texture(
-            render_data["width"],
-            render_data["height"],
-            default_value=render_data["data"],
-        )
-        texture_map[texture] = render_data['data']
-        if dpg.does_item_exist('output_tag'):
-            dpg.delete_item('output_tag', children_only=True)
-        dpg.add_image(
-            texture,
-            width=math.ceil(canvas_width * scale),
-            height=math.ceil(canvas_height * scale),
-            parent="output_tag",
-            tag='render_image_tag'
-        )
-    for tag, data in list(texture_map.items()):
-        if tag != texture and dpg.does_item_exist(tag):
-            del data
-            del texture_map[tag]
 
 def make_param_group(managers, param_group):
     for name, param in param_group.params.items():
@@ -133,6 +144,8 @@ def make_param_group(managers, param_group):
                             callback=update_parameter_callback,
                             default_value=current_param_value,
                         )
+
+
 def make_parameter_items(managers):
     current_generator = managers["generator_manager"].current_generator
 
@@ -159,9 +172,7 @@ def make_parameter_items(managers):
 
 
 def resize_window(sender, app_data, user_data):
-    model = user_data[
-        "generator_manager"
-    ].current_generator.model
+    model = user_data["generator_manager"].current_generator.model
     bounding_box = model.get_bounding_box()
     canvas_width = bounding_box.max_x - bounding_box.min_x
     canvas_height = bounding_box.max_y - bounding_box.min_y
@@ -171,7 +182,7 @@ def resize_window(sender, app_data, user_data):
     scale = min(1, max_render_width / canvas_width, max_render_height / canvas_height)
     # print(canvas_width, canvas_height, window_width, window_height, max_render_width, max_render_height, canvas_width*scale, canvas_height*scale)
     dpg.configure_item(
-        "render_image_tag", width=canvas_width * scale, height=canvas_height * scale
+        "image_tag", width=canvas_width * scale, height=canvas_height * scale
     )
 
 
@@ -245,9 +256,7 @@ def setup_gui(managers):
                     # List all available generators, allow a user to pick one
                     dpg.add_radio_button(
                         label="generator",
-                        items=managers[
-                            "generator_manager"
-                        ].get_generator_names(),
+                        items=managers["generator_manager"].get_generator_names(),
                         default_value=managers[
                             "generator_manager"
                         ].current_generator.name,
@@ -299,5 +308,12 @@ def setup_gui(managers):
     dpg.bind_theme(global_theme)
     dpg.set_primary_window("Window", True)
     dpg.show_viewport()
-    dpg.start_dearpygui()
+
+    global should_render
+    while dpg.is_dearpygui_running():
+        if should_render:
+            render_and_update(managers)
+            should_render = False
+        dpg.render_dearpygui_frame()
+
     dpg.destroy_context()
