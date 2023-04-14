@@ -109,6 +109,17 @@ class Gui:
         margin_y_px = frac_marg_y * draw_height
 
         render_data = self.renderer.render_data
+
+        # if dpg.does_item_exist(Tags.PRINT_TEXTURE):
+        #     dpg.delete_item(Tags.PRINT_TEXTURE)
+
+        # with dpg.texture_registry(show=False):
+        #     dpg.add_dynamic_texture(
+        #         render_data["width"],
+        #         render_data["height"],
+        #         default_value=render_data["data"],
+        #         tag=Tags.PRINT_TEXTURE,
+        #     )
         img_width, img_height = self._scale_to_fit(
             render_data["width"],
             render_data["height"],
@@ -230,10 +241,12 @@ class Gui:
     @_wrap_callback
     def _update_print_scale_callback(self, param_value, param_name):
         self.config_manager.update_print_setting("scale", param_value)
+        self.should_render = True
 
     @_wrap_callback
     def _update_print_rotation_callback(self, param_value, param_name):
         self.config_manager.update_print_setting("rotation", param_value)
+        self.should_render = True
 
     def _make_parameter_group(self, param_group: GeneratorParamGroup):
         for name, param in param_group.params.items():

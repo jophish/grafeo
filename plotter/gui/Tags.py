@@ -12,4 +12,5 @@ class Tags(StrEnum):
     OUTPUT_IMAGE = auto()
     RENDER_BUTTON = auto()
     PRINT_PREVIEW = auto()
+    PRINT_TEXTURE = auto()
     PRINT_PREVIEW_IMAGE = auto()
