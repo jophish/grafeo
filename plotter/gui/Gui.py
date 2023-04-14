@@ -1,4 +1,5 @@
 import dearpygui.dearpygui as dpg
+import math
 
 from plotter.config import ConfigManager
 from plotter.generators import GeneratorManager, GeneratorParam, GeneratorParamGroup
@@ -110,26 +111,13 @@ class Gui:
 
         render_data = self.renderer.render_data
 
-        # if dpg.does_item_exist(Tags.PRINT_TEXTURE):
-        #     dpg.delete_item(Tags.PRINT_TEXTURE)
-
-        # with dpg.texture_registry(show=False):
-        #     dpg.add_dynamic_texture(
-        #         render_data["width"],
-        #         render_data["height"],
-        #         default_value=render_data["data"],
-        #         tag=Tags.PRINT_TEXTURE,
-        #     )
         img_width, img_height = self._scale_to_fit(
             render_data["width"],
             render_data["height"],
             draw_width - (margin_x_px * 2),
             draw_height - (margin_y_px * 2),
         )
-        start_x = (draw_width - img_width) / 2
-        end_x = img_width + (draw_width - img_width) / 2
-        start_y = (draw_height - img_height) / 2
-        end_y = img_height + (draw_height - img_height) / 2
+
         with dpg.drawlist(
             parent=Tags.PRINT_PREVIEW,
             width=draw_width,
@@ -170,13 +158,71 @@ class Gui:
                     color=(150, 0, 0),
                 )
             with dpg.draw_layer():
-                dpg.draw_image(
-                    Tags.TEXTURE,
-                    (start_x, start_y),
-                    (end_x, end_y),
-                    uv_min=(0, 0),
-                    uv_max=(1, 1),
-                )
+                with dpg.draw_node(tag=Tags.PRINT_PREVIEW_NODE_DRAW):
+                    model = self.generator_manager.current_generator.model
+                    for line in model.lines:
+                        dpg.draw_polyline(
+                            [(point.x, point.y) for point in line.points],
+                            color=(0,0,0)
+                        )
+
+
+            self._apply_print_preview_transforms()
+
+    def _apply_print_preview_transforms(self):
+        if not dpg.does_item_exist(Tags.PRINT_PREVIEW_NODE_DRAW):
+            return
+
+        print_settings = self.config_manager.get_print_settings()
+        render_data = self.renderer.render_data
+
+        canvas_width = print_settings["max_x_coord"]
+        canvas_height = print_settings["max_y_coord"]
+        window_width, window_height = dpg.get_item_rect_size(Tags.WINDOW)
+        max_render_width = window_width - LEFT_PANEL_WIDTH - 50
+        max_render_height = window_height - 50
+
+        margin_x = print_settings["margin_x"]
+        margin_y = print_settings["margin_y"]
+        frac_marg_x = margin_x / canvas_width
+        frac_marg_y = margin_y / canvas_height
+
+        draw_width, draw_height = self._scale_to_fit(
+            canvas_width, canvas_height, max_render_width, max_render_height
+        )
+        margin_x_px = frac_marg_x * draw_width
+        margin_y_px = frac_marg_y * draw_height
+
+        render_data = self.renderer.render_data
+
+        img_width, img_height = self._scale_to_fit(
+            render_data["width"],
+            render_data["height"],
+            draw_width - (margin_x_px * 2),
+            draw_height - (margin_y_px * 2),
+        )
+
+        model = self.generator_manager.current_generator.model
+        bounding_box = model.get_bounding_box()
+
+        bounding_box_center_x = (bounding_box.max_x + bounding_box.min_x)/2
+        bounding_box_center_y = (bounding_box.max_y + bounding_box.min_y)/2
+        # First, translate the model to be centered about the origin
+        origin_translate_matrix = dpg.create_translation_matrix((-bounding_box_center_x, -bounding_box_center_y))
+
+        # Since the drawing initially has the size of the model's bounding box, scale it to fit within
+        # the margins. We also take into account user-defined scaling here.
+        (scaled_x, scaled_y) = self._scale_to_fit(bounding_box.max_x - bounding_box.min_x, bounding_box.max_y - bounding_box.min_y, draw_width - margin_x_px*2, draw_height - margin_y_px*2)
+        init_scale = scaled_x/(bounding_box.max_x - bounding_box.min_x)
+        print_scale = print_settings["scale"]
+        init_scale_matrix = dpg.create_scale_matrix((init_scale*print_scale, init_scale*print_scale, 0))
+
+        # First, translate about z-axis
+        rot_matrix = dpg.create_rotation_matrix(math.pi*print_settings['rotation']/180.0, [0, 0, -1])
+        # Then, translate into place
+        translate_matrix = dpg.create_translation_matrix((draw_width/2, draw_height/2))
+
+        dpg.apply_transform(Tags.PRINT_PREVIEW_NODE_DRAW, translate_matrix*rot_matrix*init_scale_matrix*origin_translate_matrix)
 
     def _scale_to_fit(
         self, original_x: float, original_y: float, bound_x: float, bound_y: float
@@ -241,12 +287,12 @@ class Gui:
     @_wrap_callback
     def _update_print_scale_callback(self, param_value, param_name):
         self.config_manager.update_print_setting("scale", param_value)
-        self.should_render = True
+        self._apply_print_preview_transforms()
 
     @_wrap_callback
     def _update_print_rotation_callback(self, param_value, param_name):
         self.config_manager.update_print_setting("rotation", param_value)
-        self.should_render = True
+        self._apply_print_preview_transforms()
 
     def _make_parameter_group(self, param_group: GeneratorParamGroup):
         for name, param in param_group.params.items():

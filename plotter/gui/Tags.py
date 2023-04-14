@@ -14,3 +14,4 @@ class Tags(StrEnum):
     PRINT_PREVIEW = auto()
     PRINT_TEXTURE = auto()
     PRINT_PREVIEW_IMAGE = auto()
+    PRINT_PREVIEW_NODE_DRAW = auto()
