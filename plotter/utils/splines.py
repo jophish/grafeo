@@ -2,7 +2,7 @@ import math
 from random import randint
 
 import numpy as np
-from scipy.interpolate import splev, splprep
+from scipy.interpolate import splev, splprep, CubicSpline
 
 from ..models.atoms import Line, Point
 from ..pens import Pen
@@ -61,6 +61,10 @@ def sample_spline(line: Line, n_samples: int, tightness: float = 0) -> Line:
     y = np.array([point.y for point in line.points])
     xy = np.stack((x, y), axis=-1)
 
+    # return Line(
+    #     [Point(point.x, point.y, line.pen) for point in line.points],
+    #     line.pen,
+    # )
     # calculate spline representation of curve
     tck, _ = splprep([*xy.T], s=0, k=3)
 
@@ -68,6 +72,11 @@ def sample_spline(line: Line, n_samples: int, tightness: float = 0) -> Line:
     u = np.linspace(0, 1, n_samples)
     sampled_points = splev(u, tck)
     sampled_points = np.stack(sampled_points, axis=-1)
+    return Line(
+        [Point(pt[0], pt[1], line.pen) for pt in sampled_points],
+        line.pen,
+    )
+
     inter_point_differences = np.diff(sampled_points, axis=0)
     inter_point_distances = np.linalg.norm(inter_point_differences, axis=-1)
     cumulative_distance = np.cumsum(inter_point_distances)

@@ -18,8 +18,7 @@ class Model(Bounded):
         self._lines: list[Line] = []
         self._points: list[Point] = []
         self._models: list["Model"] = []
-        self._used_pens: list[Pen] = []
-
+        self._used_pens: set[Pen] = set()
         self._bounding_box = BoundingBox()
         pass
 
@@ -30,6 +29,7 @@ class Model(Bounded):
         :param line: Line to add
         """
         self._lines.append(line)
+        self._used_pens.add(line.pen)
         self._update_bounding_box(line)
 
     @property
@@ -65,6 +65,14 @@ class Model(Bounded):
 
     def _update_bounding_box(self, atom: Atom):
         self._bounding_box.update(atom.get_bounding_box())
+
+    def get_used_pens(self) -> set[Pen]:
+        """
+        Get a set of pens used in this model.
+
+        :return: Set containing pens used.
+        """
+        return self._used_pens
 
     def get_dims(self) -> tuple[int, int]:
         """

@@ -302,9 +302,19 @@ class NoiseLineGenerator(Generator):
         n_spline_samples = param_dict["num_spline_samples"]
         model = Model()
         for i in range(num_lines):
+            p = random.random()
+            pen = Pen.One
+            if 0 <= p < .8:
+                pen = Pen.One
+            elif .8 <= p < .9:
+                pen = Pen.Two
+            elif .9 <= p < 1:
+                pen = Pen.Three
+
             line = sample_spline(
                 line_map[i], n_spline_samples, param_dict["spline_tightness"]
             )
+            line.pen = pen
             model.add_line(line)
 
         return model

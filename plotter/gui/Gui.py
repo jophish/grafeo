@@ -158,12 +158,16 @@ class Gui:
                     color=(150, 0, 0),
                 )
             with dpg.draw_layer():
+                model = self.generator_manager.current_generator.model
+                pen_map = self.config_manager.get_pen_map(self.config_manager.get_current_generator(), model.get_used_pens())
                 with dpg.draw_node(tag=Tags.PRINT_PREVIEW_NODE_DRAW):
-                    model = self.generator_manager.current_generator.model
                     for line in model.lines:
+                        pen_config = pen_map[str(line.pen.value)]
+                        r,g,b,a = bytes.fromhex(pen_config['color'][1:])
                         dpg.draw_polyline(
                             [(point.x, point.y) for point in line.points],
-                            color=(0,0,0)
+                            color=(r,g,b,a),
+                            thickness=pen_config['weight']
                         )
 
 
@@ -264,6 +268,7 @@ class Gui:
             dpg.configure_item(Tags.RENDER_BUTTON, enabled=False)
             model = self.generator_manager.generate_current()
             self.renderer.render(model)
+            self._make_pen_config_section()
             self.should_render = True
         except Exception as e:
             print(f"Error while rendering: {e}")
@@ -353,6 +358,41 @@ class Gui:
             dpg.add_table_column()
             self._make_parameter_group(param_group)
 
+    @_wrap_callback
+    def _update_pen_config(self, descr, pen):
+        index = self.config_manager.get_pen_index_by_desc(descr)
+        self.config_manager.update_pen_map(self.config_manager.get_current_generator(), pen, index)
+        self._render_print_preview()
+
+    def _make_pen_config_section(self):
+        dpg.delete_item(Tags.PEN_CONFIG, children_only=True)
+        if not self.generator_manager.current_generator.model:
+            return
+
+        used_pens = self.generator_manager.current_generator.model.get_used_pens()
+        pen_map = self.config_manager.get_pen_map(self.config_manager.get_current_generator(), used_pens)
+        available_pen_configs = self.config_manager.get_available_pen_configs()
+
+        with dpg.table(
+            header_row=False,
+            borders_outerH=True,
+            borders_innerV=False,
+            borders_innerH=True,
+            borders_outerV=False,
+            parent=Tags.PEN_CONFIG
+        ):
+            dpg.add_table_column()
+            for pen, pen_config in pen_map.items():
+                with dpg.table_row():
+                    with dpg.table_cell():
+                        dpg.add_text(default_value=f'Pen {pen}', color=(204, 36, 29))
+                        dpg.add_combo(
+                            items=[config['descr'] for config in available_pen_configs],
+                            user_data=pen,
+                            callback=self._update_pen_config,
+                            default_value=pen_config['descr']
+                        )
+
     def start(self):
         """Start the GUI."""
         dpg.create_context()
@@ -422,9 +462,8 @@ class Gui:
                         # translation should be handled by dragging on the print preview
                         # pen mapping (map distinct pens in drawing to configured pens)
                         dpg.add_button(label="test")
-                    with dpg.collapsing_header(label="pens"):
-                        # Add/Remove/Edit available pens
-                        dpg.add_button(label="test")
+                    with dpg.collapsing_header(label="pens", tag=Tags.PEN_CONFIG):
+                        self._make_pen_config_section()
                     with dpg.collapsing_header(label="files"):
                         # Load/Save files/presets
                         dpg.add_button(label="test")
