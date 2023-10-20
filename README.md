@@ -64,7 +64,7 @@ Total GPGL generation:
    - Model
    - Scale
    - Rotation
-   - Print parameters (max_x, max_y)
+   - Print parameters (max_x, max_y)f
  Return:
  A list of objects.
 

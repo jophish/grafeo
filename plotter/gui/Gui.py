@@ -213,7 +213,8 @@ class Gui:
         bounding_box_center_y = (bounding_box.max_y + bounding_box.min_y)/2
         # First, translate the model to be centered about the origin
         origin_translate_matrix = dpg.create_translation_matrix((-bounding_box_center_x, -bounding_box_center_y))
-
+        print(origin_translate_matrix)
+        print(type(origin_translate_matrix))
         # Since the drawing initially has the size of the model's bounding box, scale it to fit within
         # the margins. We also take into account user-defined scaling here.
         (scaled_x, scaled_y) = self._scale_to_fit(bounding_box.max_x - bounding_box.min_x, bounding_box.max_y - bounding_box.min_y, draw_width - margin_x_px*2, draw_height - margin_y_px*2)
