@@ -17,6 +17,15 @@ class Volume():
     def add_line(self, line):
         self.lines.append(line)
 
+    def translate(self, x, y, z):
+        new_lines = []
+        for line in self.lines:
+            new_lines.append([line[0] + x, line[1] + y, line[2] + z])
+        self.lines = new_lines
+
+    def rotate(self, x_angle, y_angle, z_angle):
+        _, rot_mat = cv2.Rodrigues([[x_angle* math.pi / 180.0, y_angle * math.pi / 180.0, z_angle * math.pi / 180.0]])
+
     def perspective_projection(self, normal, point_on_plane):
         A, B, C = normal
         x0, y0, z0 = point_on_plane

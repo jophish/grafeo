@@ -12,7 +12,7 @@ import math
 import numpy as np
 import cv2
 
-class VolumeTest(Generator):
+class CubeLines(Generator):
     """
     Test generator.
 
@@ -22,7 +22,7 @@ class VolumeTest(Generator):
 
     def __init__(self):
         """Initialize the generator."""
-        self.name = "VolumeTest"
+        self.name = "CubeLines"
         super().__init__(self.name)
 
     def get_default_params(self) -> GeneratorParamGroup:
@@ -39,11 +39,6 @@ class VolumeTest(Generator):
         return GeneratorParamGroup(
             self.name,
             [
-                FloatParam("width", "width of object", 1.0, 0, 20),
-                FloatParam("length", "length of object", 1.0, 0, 20),
-                FloatParam("height", "height of object", 1.0, 0, 20),
-                IntParam("slices", "slices in object", 10, 2, 200),
-                IntParam("divs_per_slice", "divisions per slice", 10, 2, 200),
                 FloatParam("frustrum", "frustrum length", 1.0, 0, 100),
                 FloatParam("rot_x", "object rotation about x axis", 0.0, -360, 360),
                 FloatParam("rot_y", "object rotation about y axis", -45.0, -360, 360),
@@ -51,7 +46,12 @@ class VolumeTest(Generator):
                 FloatParam("trans_x", "object translate x", 0.0, -100, 100),
                 FloatParam("trans_y", "object translate y", 0.0, -100, 100),
                 FloatParam("trans_z", "object translate z", -10.0, -100, 100),
-                IntParam("rand_lines", "num rand lines", 50, 0, 10000)
+                IntParam("num_cubes", "num cubes", 50, 0, 10000),
+                FloatParam("bound_x", "bound on x-axis for cube generation", 50.0, 0, 1000),
+                FloatParam("bound_y", "bound on y-axis for cube generation", 50.0, 0, 1000),
+                FloatParam("bound_z", "bound on z-axis for cube generation", 50.0, 0, 1000),
+                FloatParam("min_side_len", "minimum side length", 1.0, 0, 1000),
+                FloatParam("max_side_len", "maximum side length", 1.0, 0, 1000),
             ],
         )
 
@@ -137,50 +137,39 @@ class VolumeTest(Generator):
         y of the current parameter values
         :return: A model representing the generated scene
         """
-        volume = Volume()
-        width = 10
-        height = 10
-        for i in range(height):
-            for j in range(width):
-                pass
-                # volume.add_line([[-width/2, -width/2 + j*2 , 5 + i*5], [width/2, -width/2 + j*2, 5 + i*5]])
+        volumes = []
 
-        width = param_dict["width"]
-        length = param_dict["length"]
-        height = param_dict["height"]
+        for i in range(param_dict["num_cubes"]):
+            volume = Volume()
+            width = random.uniform(0, param_dict["min_side_len"])
+            length = random.uniform(0, param_dict["min_side_len"])
+            height = random.uniform(0, param_dict["min_side_len"])
+        
+            volume.add_line([[0,0,0], [0,0,0]])                          #
+            volume.add_line([[0,0,0], [width,0,0]])                     #
+            volume.add_line([[width,0,0], [width,length,0]])           #
+            volume.add_line([[width,length,0], [0,length,0]])           #
+            volume.add_line([[0,length,0], [0,0,0]])                     #
 
-        x_start = -width/2
-        x_end = width/2
+            volume.add_line([[0,0,height], [length,0,height]])           #
+            volume.add_line([[length,0,height], [length,width,height]]) #
+            volume.add_line([[length,width,height], [0,width,height]]) #
+            volume.add_line([[0,width,height], [0,0,height]])           #
 
+            volume.add_line([[0,0,0], [0,0,height]])                     #
+            volume.add_line([[length,0,0], [length,0,height]])           #
+            volume.add_line([[length,width,0], [length,width,height]]) #
+            volume.add_line([[0, width,0], [0,width,height]])           #
+            volume.translate(-length/2, -width/2, -height/2)
 
-        for i in range(param_dict["rand_lines"]):
-            x = random.uniform(-width/2, width/2)
-            y = random.uniform(-length/2, length/2)
-            z = random.uniform(-height/2, height/2)
+            offset_x = random.uniform(-param_dict["bound_x"], param_dict["bound_x"])
+            offset_y = random.uniform(-param_dict["bound_y"], param_dict["bound_y"])
+            offset_z = random.uniform(-param_dict["bound_z"], param_dict["bound_z"])
+            volume.translate(offset_x, offset_y, offset_z)
+            volumes.append(volume)
 
-            segment_length = random.uniform(0, length - y)
-            volume.add_line([[x, y, z],[x, y+segment_length, z]])
+        model = Model()
 
-
-        ################################################################
-        # volume.add_line([[0,0,0], [0,0,0]])                          #
-        # volume.add_line([[0,0,0], [length,0,0]])                     #
-        # volume.add_line([[length,0,0], [length,length,0]])           #
-        # volume.add_line([[length,length,0], [0,length,0]])           #
-        # volume.add_line([[0,length,0], [0,0,0]])                     #
-        #                                                              #
-        # volume.add_line([[0,0,length], [length,0,length]])           #
-        # volume.add_line([[length,0,length], [length,length,length]]) #
-        # volume.add_line([[length,length,length], [0,length,length]]) #
-        # volume.add_line([[0,length,length], [0,0,length]])           #
-        #                                                              #
-        # volume.add_line([[0,0,0], [0,0,legth]])                     #
-        # volume.add_line([[length,0,0], [length,0,length]])           #
-        # volume.add_line([[length,length,0], [length,length,length]]) #
-        # volume.add_line([[0,length,0], [0,length,length]])           #
-        ################################################################
-
-        # fustrum (distance from pinhole to image plane)
         fx = param_dict["frustrum"]
         fy = param_dict["frustrum"]
 
@@ -196,13 +185,10 @@ class VolumeTest(Generator):
         y_rot = param_dict["rot_y"] * math.pi / 180.0
         z_rot = param_dict["rot_z"] * math.pi / 180.0
         rvec = np.array([[x_rot, y_rot, z_rot]], np.float32)
-
-        # The camera is always at 0,0,0, pointing in the -z direction
-        # rvec = np.zeros((3, 1), np.float32)
-
         # This tanslates the object into camera space
         tvec = np.array([[param_dict["trans_x"], param_dict["trans_y"], param_dict["trans_z"]]], np.float32)
 
-        projected_model = volume.perspective_projection2(camera_matrix, dist_coeffs, rvec, tvec)
+        for volume in volumes:
+            model.add_model(volume.perspective_projection(camera_matrix, dist_coeffs, rvec, tvec))
 
-        return projected_model
+        return model
