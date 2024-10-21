@@ -16,16 +16,16 @@ shapely = "^2.0.1"
 more-itertools = "^9.0.0"
 dearpygui = "^1.9.0"
 opencv-python = "^4.7.0.72"
-scikit-image = "^0.19.3"
 pycairo = "1.22"
+python-language-server = "^0.36.2"
 
 
 [tool.poetry.group.dev.dependencies]
 pyls-isort = "^0.2.2"
 isort = "^5.12.0"
 mypy = "^1.0.1"
-python-lsp-server = {extras = ["all"], version = "^1.7.1"}
-flake8 = "^6.0.0"
+python-lsp-server = {extras = ["all"], version = "^1.12.0"}
+flake8 = "^7.1.0"
 future = "^0.18.3"
 pylsp-mypy = "^0.6.6"
 python-lsp-black = "^1.2.1"
@@ -34,6 +34,7 @@ sphinx-autodoc-typehints = "^1.22"
 scalene = "^1.5.13"
 
 [tool.poetry.scripts]
+plotter = "poetry_scripts:plotter"
 test = "poetry_scripts:test"
 format = "poetry_scripts:format_fix"
 format-check = "poetry_scripts:format_check"

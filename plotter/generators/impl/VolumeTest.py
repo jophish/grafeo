@@ -39,18 +39,18 @@ class VolumeTest(Generator):
         return GeneratorParamGroup(
             self.name,
             [
-                FloatParam("object_size", "base size of object", 50.0, 1, 200),
-                IntParam("rows", "num rows", 2, 1, 100),
-                IntParam("cols", "num cols", 13, 1, 100),
-                FloatParam("hatch_chance_top", "chance to hatch at first row", .03, 0, 1),
-                FloatParam("hatch_chance_bottom", "chance to hatch at last row", .4, 0, 1),
-                FloatParam("deg_random_scaling", "factor to multiply random degree by", .7, 0, 5),
-                FloatParam("dims_random_scaling", "factor to multiply random dimensions by", .4, 0, 5),
-                FloatParam("spacing_top_min", "min hatch spacing on first row", .6, .01, 100),
-                FloatParam("spacing_top_max", "max hatch spacing on first row", .10, .01, 100),
-                FloatParam("spacing_bottom_min", "min hatch spacing on last row", .1, .01, 100),
-                FloatParam("spacing_bottom_max", "max hatch spacing on last row", .7, .01, 100),
-                FloatParam("hatch_angle_random_scaling", "factor to multiply random angle by", .4, 0, 5)
+                FloatParam("width", "width of object", 1.0, 0, 20),
+                FloatParam("length", "length of object", 1.0, 0, 20),
+                FloatParam("height", "height of object", 1.0, 0, 20),
+                IntParam("slices", "slices in object", 10, 2, 200),
+                IntParam("divs_per_slice", "divisions per slice", 10, 2, 200),
+                FloatParam("frustrum", "frustrum length", 1.0, 0, 100),
+                FloatParam("rot_x", "object rotation about x axis", 0.0, -360, 360),
+                FloatParam("rot_y", "object rotation about y axis", -45.0, -360, 360),
+                FloatParam("rot_z", "object rotation about z axis", -45.0, -360, 360),
+                FloatParam("trans_x", "object translate x", 0.0, -100, 100),
+                FloatParam("trans_y", "object translate y", 0.0, -100, 100),
+                FloatParam("trans_z", "object translate z", -10.0, -100, 100),
             ],
         )
 
@@ -70,45 +70,60 @@ class VolumeTest(Generator):
                 pass
                 # volume.add_line([[-width/2, -width/2 + j*2 , 5 + i*5], [width/2, -width/2 + j*2, 5 + i*5]])
 
-        volume.add_line([[0,0,0], [0,0,0]])
-        volume.add_line([[0,0,0], [1,0,0]])
-        volume.add_line([[1,0,0], [1,1,0]])
-        volume.add_line([[1,1,0], [0,1,0]])
-        volume.add_line([[0,1,0], [0,0,0]])
+        width = param_dict["width"]
+        length = param_dict["length"]
+        height = param_dict["height"]
 
-        volume.add_line([[0,0,1], [1,0,1]])
-        volume.add_line([[1,0,1], [1,1,1]])
-        volume.add_line([[1,1,1], [0,1,1]])
-        volume.add_line([[0,1,1], [0,0,1]])
+        x_start = -width/2
+        x_end = width/2
+        for i in range(param_dict["slices"]):
+            z = i/param_dict["slices"]*height - height/2
+            for j in range(param_dict["divs_per_slice"]):
+                y = j/param_dict["divs_per_slice"]*length - length/2
+                volume.add_line([[x_start, y, z],[x_end, y, z]])
 
-        volume.add_line([[0,0,0], [0,0,1]])
-        volume.add_line([[1,0,0], [1,0,1]])
-        volume.add_line([[1,1,0], [1,1,1]])
-        volume.add_line([[0,1,0], [0,1,1]])
+
+        ################################################################
+        # volume.add_line([[0,0,0], [0,0,0]])                          #
+        # volume.add_line([[0,0,0], [length,0,0]])                     #
+        # volume.add_line([[length,0,0], [length,length,0]])           #
+        # volume.add_line([[length,length,0], [0,length,0]])           #
+        # volume.add_line([[0,length,0], [0,0,0]])                     #
+        #                                                              #
+        # volume.add_line([[0,0,length], [length,0,length]])           #
+        # volume.add_line([[length,0,length], [length,length,length]]) #
+        # volume.add_line([[length,length,length], [0,length,length]]) #
+        # volume.add_line([[0,length,length], [0,0,length]])           #
+        #                                                              #
+        # volume.add_line([[0,0,0], [0,0,legth]])                     #
+        # volume.add_line([[length,0,0], [length,0,length]])           #
+        # volume.add_line([[length,length,0], [length,length,length]]) #
+        # volume.add_line([[0,length,0], [0,length,length]])           #
+        ################################################################
 
         # fustrum (distance from pinhole to image plane)
-        fx = 1
-        fy = 1
+        fx = param_dict["frustrum"]
+        fy = param_dict["frustrum"]
 
-        cx = -50
-        cy = 1000
+        cx = 0
+        cy = 0
 
         camera_matrix = np.array([[fx, 0, cx],
                           [0, fy, cy],
                           [0, 0, 1]], np.float32)
         dist_coeffs = np.zeros((5, 1), np.float32)
 
-        x_rot = 0
-        y_rot = -45 * math.pi / 180.0
-        z_rot = -45 * math.pi / 180.0
+        x_rot = param_dict["rot_x"] * math.pi / 180.0
+        y_rot = param_dict["rot_y"] * math.pi / 180.0
+        z_rot = param_dict["rot_z"] * math.pi / 180.0
         rvec = np.array([[x_rot, y_rot, z_rot]], np.float32)
 
         # The camera is always at 0,0,0, pointing in the -z direction
         # rvec = np.zeros((3, 1), np.float32)
 
-        tvec = np.array([[-.5, -.5, -10.5]], np.float32)
+        # This tanslates the object into camera space
+        tvec = np.array([[param_dict["trans_x"], param_dict["trans_y"], param_dict["trans_z"]]], np.float32)
 
         projected_model = volume.perspective_projection2(camera_matrix, dist_coeffs, rvec, tvec)
 
-        print(projected_model.get_bounding_box())
         return projected_model

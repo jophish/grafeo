@@ -15,15 +15,17 @@ class SerialPrinter():
 
     def __init__(self, serial_settings):
         self.serial_settings = serial_settings
-        self.ser = serial.Serial(
-            port=serial_settings['port'],
-            baudrate=serial_settings['baud'],
-            bytesize=EIGHTBITS,
-            parity=PARITY_EVEN,
-            stopbits=STOPBITS_TWO,
-            timeout=1,
-            xonxoff=True,
-        )
+        #########################################
+        # self.ser = serial.Serial(             #
+        #     port=serial_settings['port'],     #
+        #     baudrate=serial_settings['baud'], #
+        #     bytesize=EIGHTBITS,               #
+        #     parity=PARITY_EVEN,               #
+        #     stopbits=STOPBITS_TWO,            #
+        #     timeout=1,                        #
+        #     xonxoff=True,                     #
+        # )                                     #
+        #########################################
         self.gpgl_buffer = []
         self.printing = False
         self.printing_needs_user_input = False
