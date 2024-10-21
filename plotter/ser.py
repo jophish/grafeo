@@ -2,7 +2,6 @@ from random import randint
 from time import sleep, time
 
 import serial
-from py5 import Sketch
 from serial import EIGHTBITS, PARITY_EVEN, STOPBITS_TWO
 
 
@@ -79,5 +78,7 @@ def run_prog(gpgl, pen_config):
 
 
 def main():
-    gpgl = read_gpgl("./sq-inkcut-1677037622.gpgl")
-    run_prog(gpgl)
+    gpgl = read_gpgl("./gpgl/inkcut-1677023683.gpgl")
+    run_prog(gpgl, [])
+
+main()

@@ -44,7 +44,9 @@ class Generator(ABC):
         """
         self.model = Model()
         self.model = self._generate(self.params.get_dict_values())
-        self.model.normalize()
+        # For some unknown reason, this breaks shit if the model
+        # was not already fully within the +x/+y quadrant
+        # self.model.normalize()
         return self.model
 
     def reset_params(self):

@@ -57,6 +57,7 @@ class Renderer:
         width = bounding_box.max_x - bounding_box.min_x
         height = bounding_box.max_y - bounding_box.min_y
         self.set_scale_factor(width, height)
+
         h = math.ceil(height * self.scale)
         w = math.ceil(width * self.scale)
 
@@ -70,13 +71,14 @@ class Renderer:
         self.ctx.paint()
         self.ctx.restore()
 
-        for line in model.lines:
+        for line in model.all_lines:
             self.draw_line(line)
 
         data_view = data.view(numpy.uint8).reshape((h * w * 4)).astype(numpy.float32)
         data_view /= 255
         self.render_data = {"data": data_view, "height": h, "width": w}
         self.pil_image = to_pil(surface)
+
         return self.render_data
 
     def draw_line(self, line: Line):

@@ -22,6 +22,22 @@ class Model(Bounded):
         self._bounding_box = BoundingBox()
         pass
 
+    def intersection(self, bounding_box: BoundingBox) -> "Model":
+        """
+        Return a new model, which represents the interserction of this model and a bounding box.
+        """
+        new_model = Model()
+        for point in self._points:
+            if point.is_within_bounds(bounding_box):
+                new_model.add_point(point)
+        for line in self._lines:
+            new_lines = line.intersection(bounding_box)
+            for new_line in new_lines:
+                new_model.add_line(new_line)
+        for model in self._models:
+            new_model.add_model(model.intersection(bounding_box))
+        return new_model
+
     def add_line(self, line: Line):
         """
         Add a line to this model.
@@ -29,13 +45,20 @@ class Model(Bounded):
         :param line: Line to add
         """
         self._lines.append(line)
-        self._used_pens.add(line.pen)
         self._update_bounding_box(line)
 
     @property
     def lines(self):
         """Get the lines in this model."""
         return self._lines
+
+    @property
+    def all_lines(self):
+        """Gets all lines in this model, including those in submodels."""
+        lines = [line for line in self._lines]
+        for model in self._models:
+            lines += model.all_lines
+        return lines
 
     @property
     def models(self):
@@ -45,7 +68,7 @@ class Model(Bounded):
     @property
     def points(self):
         """Get the points in this model."""
-        return self._models
+        return self._points
 
     def add_point(self, point: Point):
         """
@@ -62,8 +85,9 @@ class Model(Bounded):
         :param model: Model to add
         """
         self._models.append(model)
+        self._update_bounding_box(model)
 
-    def _update_bounding_box(self, atom: Atom):
+    def _update_bounding_box(self, atom: Bounded):
         self._bounding_box.update(atom.get_bounding_box())
 
     def get_used_pens(self) -> set[Pen]:
@@ -72,7 +96,12 @@ class Model(Bounded):
 
         :return: Set containing pens used.
         """
-        return self._used_pens
+        used_pens: set[Pen] = set()
+        for line in self._lines:
+            used_pens = used_pens.union(set([line.pen]))
+        for model in self._models:
+            used_pens = used_pens.union(model.get_used_pens())
+        return used_pens
 
     def get_dims(self) -> tuple[int, int]:
         """
@@ -98,7 +127,6 @@ class Model(Bounded):
         """
         translate_x = abs(min(0, self._bounding_box.min_x))
         translate_y = abs(min(0, self._bounding_box.min_y))
-
         for line in self._lines:
             line.translate(translate_x, translate_y)
         for point in self._points:
@@ -124,3 +152,40 @@ class Model(Bounded):
         for point in self._points:
             bounding_box.update(point.make_bounding_box())
         return bounding_box
+
+    def translate(self, x, y):
+        for line in self._lines:
+            line.translate(x, y)
+        for point in self._points:
+            point.translate(x, y)
+        for model in self._models:
+            model.translate(x, y)
+        self._bounding_box.min_x += x
+        self._bounding_box.max_x += x
+        self._bounding_box.min_y += y
+        self._bounding_box.max_y += y
+
+    def rotate(self, deg, x, y):
+        """
+        Rotates the model by deg about the point x, y.
+
+        :param deg: Degrees to rotate by
+        :param x: x coordinate of point to rotate about
+        :param y: y coordinate of point to rotate about
+        """
+        for line in self._lines:
+            line.rotate(deg, x, y)
+        for point in self._points:
+            point.rotate(deg, x, y)
+        for model in self._models:
+            model.rotate(deg, x, y)
+        self._bounding_box = self.make_bounding_box()
+
+    def apply_matrix(self, matrix):
+        for line in self._lines:
+            line.apply_matrix(matrix)
+        for point in self._points:
+            point.apply_matrix(matrix)
+        for model in self._models:
+            model.apply_matrix(matrix)
+        self._bounding_box = self.make_bounding_box()

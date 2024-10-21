@@ -108,6 +108,14 @@ class ConfigManager:
         """
         return self.config["print_settings"]
 
+    def get_serial_settings(self) -> dict[str, Any]:
+        """
+        Return the current serial settings.
+
+        :return: Current serial settings
+        """
+        return self.config["serial"]
+
     def update_print_setting(self, name: str, value: Any):
         """
         Update an individual print setting.
@@ -124,7 +132,7 @@ class ConfigManager:
             if 'default' in pen and pen['default']:
                 return i
 
-    def get_pen_map(self, generator_name: str, pens: set[Pen]):
+    def get_pen_map(self, generator_name: str, pens: set[Pen]) -> dict[Pen, PenConfig]:
         """
         Return a map from used pens to pen configs.
 
@@ -144,7 +152,7 @@ class ConfigManager:
             for pen in pens:
                 if str(pen.value) not in generator_pen_map:
                     dirty = True
-                    self.config['generator_pen_map'][generator_name][pen.value] = default_pen_index
+                    self.config['generator_pen_map'][generator_name][str(pen.value)] = default_pen_index
                 pen_map[str(pen.value)] = self.config['pens'][generator_pen_map[str(pen.value)]]
             if dirty:
                 self.write_config_to_disk()
@@ -203,6 +211,7 @@ class ConfigManager:
                     "color": "#40b43780",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-4 (Crimson Red)",
@@ -210,6 +219,7 @@ class ConfigManager:
                     "color": "#e1020780",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-19 (Canary Yellow)",
@@ -217,6 +227,7 @@ class ConfigManager:
                     "color": "#f7f70380",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-15 (Yellow Orange)",
@@ -224,6 +235,7 @@ class ConfigManager:
                     "color": "#fca80380",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-61 (Dark Umber)",
@@ -231,6 +243,7 @@ class ConfigManager:
                     "color": "#39171680",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-8 (Pink)",
@@ -238,6 +251,7 @@ class ConfigManager:
                     "color": "#ff70ff80",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-50 (Violet)",
@@ -245,6 +259,7 @@ class ConfigManager:
                     "color": "#260ffc80",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-44 (Ultramarine)",
@@ -252,6 +267,7 @@ class ConfigManager:
                     "color": "#3370fa80",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-32 (Parrot Green)",
@@ -259,6 +275,7 @@ class ConfigManager:
                     "color": "#3fd78180",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-98 (Black)",
@@ -266,6 +283,7 @@ class ConfigManager:
                     "color": "#06080880",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-6 (Carmine Red)",
@@ -273,6 +291,7 @@ class ConfigManager:
                     "color": "#ff578c80",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Prismacolor PM-53 (Mulberry)",
@@ -280,6 +299,7 @@ class ConfigManager:
                     "color": "#c40dff80",
                     "location": 3,
                     "pause_to_replace": True,
+                    "load_directly": True
                 },
                 {
                     "descr": "Micron 005 Red",

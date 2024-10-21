@@ -3,7 +3,7 @@ from scipy.interpolate import interp1d
 from ...pens.Pen import Pen
 from ..BoundingBox import BoundingBox
 from .Atom import Atom
-
+import math
 
 class Point(Atom):
     """
@@ -33,6 +33,21 @@ class Point(Atom):
         self._bounding_box = BoundingBox(
             min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y
         )
+
+    def is_within_bounds(self, bounding_box: BoundingBox) -> bool:
+        """
+        Determine whether the point is within a bounding box.
+        """
+        return (
+            self.x == bounding_box.max_x and
+            self.x == bounding_box.min_x and
+            self.y == bounding_box.max_y and
+            self.y == bounding_box.min_y
+        )
+
+    def copy(self) -> "Point":
+        """Create a deep-copy of the current Point."""
+        return Point(self.x, self.y, self.pen)
 
     def lerp(self, other: "Point", ratio: float) -> "Point":
         """
@@ -81,3 +96,26 @@ class Point(Atom):
         :return: The point's bounding box
         """
         return BoundingBox(min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y)
+
+    def rotate(self, deg, x, y):
+        """
+        Rotates the point by deg about the point x, y.
+
+        :param deg: Degrees to rotate by
+        :param x: x coordinate of point to rotate about
+        :param y: y coordinate of point to rotate about
+        """
+        theta = math.pi*deg/180.0
+        new_x = (self.x - x)*math.cos(theta) - (self.y - y)*math.sin(theta) + x
+        new_y = (self.y - y)*math.cos(theta) + (self.x - x)*math.sin(theta) + y
+        self.x = new_x
+        self.y = new_y
+        self._bounding_box = self.make_bounding_box()
+
+    def apply_matrix(self, matrix):
+        new_x = matrix[0][0] * self.x + matrix[0][1] * self.y
+        new_y = matrix[1][0] * self.x + matrix[1][1] * self.y
+        self.x = new_x
+        self.y = new_y
+
+        self._bounding_box = self.make_bounding_box()

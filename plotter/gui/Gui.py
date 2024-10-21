@@ -1,12 +1,14 @@
 import dearpygui.dearpygui as dpg
 import math
+import traceback
 
 from plotter.config import ConfigManager
 from plotter.generators import GeneratorManager, GeneratorParam, GeneratorParamGroup
 from plotter.generators.Parameters import EnumParam, FloatParam, IntParam
 from plotter.gui.Tags import Tags
 from plotter.renderer import Renderer
-
+from plotter.printers.SerialPrinter import SerialPrinter
+from plotter.utils.scaling import scale_to_fit
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
 LEFT_PANEL_TEXT_WRAP = LEFT_PANEL_WIDTH - LEFT_PANEL_MARGIN
@@ -40,8 +42,12 @@ class Gui:
         self.generator_manager.set_current_generator(
             self.config_manager.get_current_generator()
         )
+        self.printer = SerialPrinter(self.config_manager.get_serial_settings())
+
         self.renderer = Renderer(None, None)
         self.should_render = False
+
+        self.modal_visible = False
 
     def _update_render(self):
         model = self.generator_manager.current_generator.model
@@ -94,7 +100,7 @@ class Gui:
         max_render_width = window_width - LEFT_PANEL_WIDTH - 50
         max_render_height = window_height - 50
 
-        draw_width, draw_height = self._scale_to_fit(
+        draw_width, draw_height = scale_to_fit(
             canvas_width, canvas_height, max_render_width, max_render_height
         )
 
@@ -111,7 +117,7 @@ class Gui:
 
         render_data = self.renderer.render_data
 
-        img_width, img_height = self._scale_to_fit(
+        img_width, img_height = scale_to_fit(
             render_data["width"],
             render_data["height"],
             draw_width - (margin_x_px * 2),
@@ -161,7 +167,7 @@ class Gui:
                 model = self.generator_manager.current_generator.model
                 pen_map = self.config_manager.get_pen_map(self.config_manager.get_current_generator(), model.get_used_pens())
                 with dpg.draw_node(tag=Tags.PRINT_PREVIEW_NODE_DRAW):
-                    for line in model.lines:
+                    for line in model.all_lines:
                         pen_config = pen_map[str(line.pen.value)]
                         r,g,b,a = bytes.fromhex(pen_config['color'][1:])
                         dpg.draw_polyline(
@@ -191,7 +197,7 @@ class Gui:
         frac_marg_x = margin_x / canvas_width
         frac_marg_y = margin_y / canvas_height
 
-        draw_width, draw_height = self._scale_to_fit(
+        draw_width, draw_height = scale_to_fit(
             canvas_width, canvas_height, max_render_width, max_render_height
         )
         margin_x_px = frac_marg_x * draw_width
@@ -199,7 +205,7 @@ class Gui:
 
         render_data = self.renderer.render_data
 
-        img_width, img_height = self._scale_to_fit(
+        img_width, img_height = scale_to_fit(
             render_data["width"],
             render_data["height"],
             draw_width - (margin_x_px * 2),
@@ -211,16 +217,18 @@ class Gui:
 
         bounding_box_center_x = (bounding_box.max_x + bounding_box.min_x)/2
         bounding_box_center_y = (bounding_box.max_y + bounding_box.min_y)/2
+
         # First, translate the model to be centered about the origin
         origin_translate_matrix = dpg.create_translation_matrix((-bounding_box_center_x, -bounding_box_center_y))
-        print(origin_translate_matrix)
-        print(type(origin_translate_matrix))
+
         # Since the drawing initially has the size of the model's bounding box, scale it to fit within
         # the margins. We also take into account user-defined scaling here.
-        (scaled_x, scaled_y) = self._scale_to_fit(bounding_box.max_x - bounding_box.min_x, bounding_box.max_y - bounding_box.min_y, draw_width - margin_x_px*2, draw_height - margin_y_px*2)
+        (scaled_x, scaled_y) = scale_to_fit(bounding_box.max_x - bounding_box.min_x, bounding_box.max_y - bounding_box.min_y, draw_width - margin_x_px*2, draw_height - margin_y_px*2)
         init_scale = scaled_x/(bounding_box.max_x - bounding_box.min_x)
         print_scale = print_settings["scale"]
-        init_scale_matrix = dpg.create_scale_matrix((init_scale*print_scale, init_scale*print_scale, 0))
+        # Note the negative y-axis scaling factor. This is necessary, since the coordinate system
+        # in dpg has a different origin definition than we do... I think.
+        init_scale_matrix = dpg.create_scale_matrix((init_scale*print_scale, -init_scale*print_scale, 0))
 
         # First, translate about z-axis
         rot_matrix = dpg.create_rotation_matrix(math.pi*print_settings['rotation']/180.0, [0, 0, -1])
@@ -228,19 +236,6 @@ class Gui:
         translate_matrix = dpg.create_translation_matrix((draw_width/2, draw_height/2))
 
         dpg.apply_transform(Tags.PRINT_PREVIEW_NODE_DRAW, translate_matrix*rot_matrix*init_scale_matrix*origin_translate_matrix)
-
-    def _scale_to_fit(
-        self, original_x: float, original_y: float, bound_x: float, bound_y: float
-    ) -> tuple[float, float]:
-        """
-        Given a bounding box and some dimensions, scale down/up the dimensions
-        such that they fit (maximally) within the bounding box.
-        """
-        scale = min(1, bound_x / original_x, bound_y / original_y)
-        scaled_x = original_x * scale
-        scaled_y = original_y * scale
-        scale_up = min(bound_x / scaled_x, bound_y / scaled_y)
-        return (scaled_x * scale_up, scaled_y * scale_up)
 
     @_wrap_callback
     def _resize_window_callback(self, app_data, user_data):
@@ -264,6 +259,16 @@ class Gui:
         self._render_print_preview()
 
     @_wrap_callback
+    def _print_callback(self, app_data, user_data):
+        model = self.generator_manager.current_generator.model
+        self.printer.begin_print(
+            model,
+            self.config_manager.get_pen_map(self.config_manager.get_current_generator(), model.get_used_pens()),
+            self.config_manager.get_print_settings()
+        )
+        pass
+
+    @_wrap_callback
     def _render_callback(self, app_data, user_data):
         try:
             dpg.configure_item(Tags.RENDER_BUTTON, enabled=False)
@@ -273,6 +278,7 @@ class Gui:
             self.should_render = True
         except Exception as e:
             print(f"Error while rendering: {e}")
+            print(traceback.format_exc())
             dpg.configure_item(Tags.RENDER_BUTTON, enabled=True)
             self.should_render = False
 
@@ -394,6 +400,30 @@ class Gui:
                             default_value=pen_config['descr']
                         )
 
+    @_wrap_callback
+    def _pen_replaced(self, app_data, user_data):
+        dpg.configure_item(Tags.PEN_REPLACE_MODAL, show=False)
+        self.modal_visible = False
+        self.printer.continue_print()
+
+    def _update_pen_replace_modal(self):
+        self.modal_visible = True
+        dpg.delete_item(Tags.PEN_REPLACE_MODAL, children_only=True)
+        dpg.add_text("Once plotting has paused, please replace pen", parent=Tags.PEN_REPLACE_MODAL)
+        dpg.add_text("Wait up to 8 seconds for the current pen to be returned to its bay", parent=Tags.PEN_REPLACE_MODAL)
+        dpg.add_separator(parent=Tags.PEN_REPLACE_MODAL)
+        dpg.add_text(f'Pen to load: {self.printer.pen_to_replace["descr"]}', parent=Tags.PEN_REPLACE_MODAL)
+        dpg.add_separator(parent=Tags.PEN_REPLACE_MODAL)
+
+        if self.printer.pen_to_replace.get('load_directly', False):
+            dpg.add_text('Load the pen directly into holder. It\'s okay to move the print head during this process.', parent=Tags.PEN_REPLACE_MODAL)
+        else:
+            dpg.add_text(f'Slot to load in: {self.printer.pen_to_replace["location"]}', parent=Tags.PEN_REPLACE_MODAL)
+
+        dpg.add_button(label="I've replaced the pen", callback=self._pen_replaced, parent=Tags.PEN_REPLACE_MODAL)
+
+        dpg.configure_item(Tags.PEN_REPLACE_MODAL, show=True)
+
     def start(self):
         """Start the GUI."""
         dpg.create_context()
@@ -401,6 +431,9 @@ class Gui:
         dpg.setup_dearpygui()
         dpg.set_global_font_scale(1)
         with dpg.window(tag=Tags.WINDOW):
+            # Pop-up to confirm pen replacement
+            with dpg.window(label="Replace Pen", modal=True, show=False, tag=Tags.PEN_REPLACE_MODAL, no_title_bar=True):
+                pass
             with dpg.group(horizontal=True):
                 # Left pane
                 with dpg.child_window(width=LEFT_PANEL_WIDTH, autosize_y=True):
@@ -418,6 +451,11 @@ class Gui:
                     with dpg.collapsing_header(label="i/o"):
                         # Set Serial port options
                         dpg.add_button(label="test")
+                        dpg.add_button(
+                            label="print",
+                            callback=self._print_callback,
+                            tag=Tags.PRINT_BUTTON,
+                        )
                     with dpg.collapsing_header(label="print layout"):
                         # Options relating to print layout
                         # paper dimensions: (max x/y GPGL coords)
@@ -486,8 +524,6 @@ class Gui:
                 with dpg.group():
                     pass
 
-        self._setup_theme()
-
         with dpg.item_handler_registry(tag=Tags.WINDOW_HANDLER):
             dpg.add_item_resize_handler(callback=self._resize_window_callback)
         dpg.bind_item_handler_registry(Tags.WINDOW, Tags.WINDOW_HANDLER)
@@ -498,6 +534,8 @@ class Gui:
             if self.should_render:
                 self._update_render()
                 self.should_render = False
+            if self.printer.printing_needs_user_input and not self.modal_visible:
+                self._update_pen_replace_modal()
             dpg.render_dearpygui_frame()
 
         dpg.destroy_context()
