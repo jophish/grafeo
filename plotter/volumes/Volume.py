@@ -20,39 +20,24 @@ class Volume():
     def translate(self, x, y, z):
         new_lines = []
         for line in self.lines:
-            new_lines.append([line[0] + x, line[1] + y, line[2] + z])
+            new_line = [[point[0] + x, point[1] + y, point[2] + z] for point in line]
+            new_lines.append(new_line)
         self.lines = new_lines
 
     def rotate(self, x_angle, y_angle, z_angle):
-        _, rot_mat = cv2.Rodrigues([[x_angle* math.pi / 180.0, y_angle * math.pi / 180.0, z_angle * math.pi / 180.0]])
+        """
+        Rotate volume about the origin.
+        """
 
-    def perspective_projection(self, normal, point_on_plane):
-        A, B, C = normal
-        x0, y0, z0 = point_on_plane
+        rot_mat, _ = cv2.Rodrigues(np.array([[x_angle* math.pi / 180.0, y_angle * math.pi / 180.0, z_angle * math.pi / 180.0]], np.float32))
 
-        # Plane equation constant D
-        D = -(A * x0 + B * y0 + C * z0)
-
-        projected_model = Model()
+        new_lines = []
         for line in self.lines:
-            projected_points = []
-            print('new line')
-            for point in line:
-                # Calculate signed distance from point to the plane
-                d = (A * point[0] + B * point[1] + C * point[2] + D) / math.sqrt(A**2 + B**2 + C**2)
+            new_line = [cv2.warpPerspective(np.array([[point[0], point[1], point[2]]]), rot_mat, (3,1)) for point in line]
+            new_lines.append([[point[0][0], point[0][1], point[0][2]] for point in new_line])
+        self.lines = new_lines
 
-                # Project the point onto the plane
-                x_proj = point[0] - d * (A / math.sqrt(A**2 + B**2 + C**2))
-                y_proj = point[1] - d * (B / math.sqrt(A**2 + B**2 + C**2))
-
-                projected_points.append(Point(x_proj, y_proj, Pen.One))
-                print(d)
-                print(x_proj, y_proj)
-            projected_model.add_line(Line(projected_points, Pen.One))
-
-        return projected_model
-
-    def perspective_projection2(self, camera_matrix, dist_coeffs, rvec, tvec):
+    def perspective_projection(self, camera_matrix, dist_coeffs, rvec, tvec):
 
         projected_model = Model()
         for line in self.lines:
@@ -64,7 +49,7 @@ class Volume():
 
             line_points = []
             for point in points_2d:
-                line_points.append(Point(point[0][0], point[0][1], Pen.One))
+                line_points.append(Point(float(point[0][0]), float(point[0][1]), Pen.One))
             projected_model.add_line(Line(line_points, Pen.One))
 
         return projected_model

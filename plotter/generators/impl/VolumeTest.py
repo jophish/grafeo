@@ -125,7 +125,7 @@ class VolumeTest(Generator):
         # This tanslates the object into camera space
         tvec = np.array([[param_dict["trans_x"], param_dict["trans_y"], param_dict["trans_z"]]], np.float32)
 
-        projected_model = volume.perspective_projection2(camera_matrix, dist_coeffs, rvec, tvec)
+        projected_model = volume.perspective_projection(camera_matrix, dist_coeffs, rvec, tvec)
 
         return projected_model
 
@@ -203,6 +203,6 @@ class VolumeTest(Generator):
         # This tanslates the object into camera space
         tvec = np.array([[param_dict["trans_x"], param_dict["trans_y"], param_dict["trans_z"]]], np.float32)
 
-        projected_model = volume.perspective_projection2(camera_matrix, dist_coeffs, rvec, tvec)
+        projected_model = volume.perspective_projection(camera_matrix, dist_coeffs, rvec, tvec)
 
         return projected_model

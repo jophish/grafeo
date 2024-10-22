@@ -9,6 +9,8 @@ from plotter.gui.Tags import Tags
 from plotter.renderer import Renderer
 from plotter.printers.SerialPrinter import SerialPrinter
 from plotter.utils.scaling import scale_to_fit
+from plotter.fonts.FontManager import FontManager
+
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
 LEFT_PANEL_TEXT_WRAP = LEFT_PANEL_WIDTH - LEFT_PANEL_MARGIN
@@ -47,6 +49,8 @@ class Gui:
         self.renderer = Renderer(None, None)
         self.should_render = False
 
+        self.font_manager = FontManager()
+
         self.modal_visible = False
 
     def _update_render(self):
@@ -80,6 +84,7 @@ class Gui:
                 default_value=render_data["data"],
                 tag=Tags.TEXTURE,
             )
+
         dpg.add_image(
             Tags.TEXTURE,
             width=canvas_width * scale,

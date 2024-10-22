@@ -22,6 +22,19 @@ class Model(Bounded):
         self._bounding_box = BoundingBox()
         pass
 
+    def is_empty(self):
+        return len(self.models) == 0 and len(self.lines) == 0 and len(self.points) == 0
+
+    def copy(self) -> "Model":
+        new_model = Model()
+        for model in self.models:
+            new_model.add_model(model.copy())
+        for line in self.lines:
+            new_model.add_line(line.copy())
+        for point in self.points:
+            new_model.add_point(point.copy())
+        return new_model
+
     def intersection(self, bounding_box: BoundingBox) -> "Model":
         """
         Return a new model, which represents the interserction of this model and a bounding box.

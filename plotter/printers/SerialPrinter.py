@@ -15,17 +15,15 @@ class SerialPrinter():
 
     def __init__(self, serial_settings):
         self.serial_settings = serial_settings
-        #########################################
-        # self.ser = serial.Serial(             #
-        #     port=serial_settings['port'],     #
-        #     baudrate=serial_settings['baud'], #
-        #     bytesize=EIGHTBITS,               #
-        #     parity=PARITY_EVEN,               #
-        #     stopbits=STOPBITS_TWO,            #
-        #     timeout=1,                        #
-        #     xonxoff=True,                     #
-        # )                                     #
-        #########################################
+        self.ser = serial.Serial(             #
+            port=serial_settings['port'],     #
+            baudrate=serial_settings['baud'], #
+            bytesize=EIGHTBITS,               #
+            parity=PARITY_EVEN,               #
+            stopbits=STOPBITS_TWO,            #
+            timeout=1,                        #
+            xonxoff=True,                     #
+        )                                     #
         self.gpgl_buffer = []
         self.printing = False
         self.printing_needs_user_input = False
@@ -112,9 +110,12 @@ class SerialPrinter():
         bounding_box = model.get_bounding_box()
 
         model_lines = model.all_lines
+        print(model_lines[0].points[0].x, model_lines[0].points[0].y)
+        print(model_lines[0].points[-1].x, model_lines[0].points[-1].y)
         gpgl_generator.set_lines(model_lines)
         gpgl = gpgl_generator.generate_gpgl()
-
+        print(gpgl[:5])
+        print(gpgl[-5:])
         self.ser.write(fmt(":"))
         sleep(5)
         self.ser.write(fmt("M0, 0"))

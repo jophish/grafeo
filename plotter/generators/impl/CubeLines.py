@@ -45,7 +45,7 @@ class CubeLines(Generator):
                 FloatParam("rot_z", "object rotation about z axis", -45.0, -360, 360),
                 FloatParam("trans_x", "object translate x", 0.0, -100, 100),
                 FloatParam("trans_y", "object translate y", 0.0, -100, 100),
-                FloatParam("trans_z", "object translate z", -10.0, -100, 100),
+                FloatParam("trans_z", "object translate z", -10.0, -2000, 2000),
                 IntParam("num_cubes", "num cubes", 50, 0, 10000),
                 FloatParam("bound_x", "bound on x-axis for cube generation", 50.0, 0, 1000),
                 FloatParam("bound_y", "bound on y-axis for cube generation", 50.0, 0, 1000),
@@ -54,80 +54,6 @@ class CubeLines(Generator):
                 FloatParam("max_side_len", "maximum side length", 1.0, 0, 1000),
             ],
         )
-
-    def _generate2(self, param_dict: dict[str, Any]) -> Model:
-        """
-        Generate a model using the current parameter values.
-
-        :param param_dict: A nested dictionar
-        y of the current parameter values
-        :return: A model representing the generated scene
-        """
-        volume = Volume()
-        width = 10
-        height = 10
-        for i in range(height):
-            for j in range(width):
-                pass
-                # volume.add_line([[-width/2, -width/2 + j*2 , 5 + i*5], [width/2, -width/2 + j*2, 5 + i*5]])
-
-        width = param_dict["width"]
-        length = param_dict["length"]
-        height = param_dict["height"]
-
-        x_start = -width/2
-        x_end = width/2
-        for i in range(param_dict["slices"]):
-            z = i/param_dict["slices"]*height - height/2
-            for j in range(param_dict["divs_per_slice"]):
-                y = j/param_dict["divs_per_slice"]*length - length/2
-                volume.add_line([[x_start, y, z],[x_end, y, z]])
-
-
-        ################################################################
-        # volume.add_line([[0,0,0], [0,0,0]])                          #
-        # volume.add_line([[0,0,0], [length,0,0]])                     #
-        # volume.add_line([[length,0,0], [length,length,0]])           #
-        # volume.add_line([[length,length,0], [0,length,0]])           #
-        # volume.add_line([[0,length,0], [0,0,0]])                     #
-        #                                                              #
-        # volume.add_line([[0,0,length], [length,0,length]])           #
-        # volume.add_line([[length,0,length], [length,length,length]]) #
-        # volume.add_line([[length,length,length], [0,length,length]]) #
-        # volume.add_line([[0,length,length], [0,0,length]])           #
-        #                                                              #
-        # volume.add_line([[0,0,0], [0,0,legth]])                     #
-        # volume.add_line([[length,0,0], [length,0,length]])           #
-        # volume.add_line([[length,length,0], [length,length,length]]) #
-        # volume.add_line([[0,length,0], [0,length,length]])           #
-        ################################################################
-
-        # fustrum (distance from pinhole to image plane)
-        fx = param_dict["frustrum"]
-        fy = param_dict["frustrum"]
-
-        cx = 0
-        cy = 0
-
-        camera_matrix = np.array([[fx, 0, cx],
-                          [0, fy, cy],
-                          [0, 0, 1]], np.float32)
-        dist_coeffs = np.zeros((5, 1), np.float32)
-
-        x_rot = param_dict["rot_x"] * math.pi / 180.0
-        y_rot = param_dict["rot_y"] * math.pi / 180.0
-        z_rot = param_dict["rot_z"] * math.pi / 180.0
-        rvec = np.array([[x_rot, y_rot, z_rot]], np.float32)
-
-        # The camera is always at 0,0,0, pointing in the -z direction
-        # rvec = np.zeros((3, 1), np.float32)
-
-        # This tanslates the object into camera space
-        tvec = np.array([[param_dict["trans_x"], param_dict["trans_y"], param_dict["trans_z"]]], np.float32)
-
-        projected_model = volume.perspective_projection2(camera_matrix, dist_coeffs, rvec, tvec)
-
-        return projected_model
 
     def _generate(self, param_dict: dict[str, Any]) -> Model:
         """
@@ -141,15 +67,15 @@ class CubeLines(Generator):
 
         for i in range(param_dict["num_cubes"]):
             volume = Volume()
-            width = random.uniform(0, param_dict["min_side_len"])
-            length = random.uniform(0, param_dict["min_side_len"])
-            height = random.uniform(0, param_dict["min_side_len"])
-        
-            volume.add_line([[0,0,0], [0,0,0]])                          #
-            volume.add_line([[0,0,0], [width,0,0]])                     #
-            volume.add_line([[width,0,0], [width,length,0]])           #
-            volume.add_line([[width,length,0], [0,length,0]])           #
-            volume.add_line([[0,length,0], [0,0,0]])                     #
+            width = random.uniform(param_dict["min_side_len"], param_dict["max_side_len"])
+            length = random.uniform(param_dict["min_side_len"], param_dict["max_side_len"])
+            height = random.uniform(param_dict["min_side_len"], param_dict["max_side_len"])
+
+            volume.add_line([[0,0,0], [0,0,0]])
+            volume.add_line([[0,0,0], [length,0,0]])
+            volume.add_line([[length,0,0], [length,width,0]])
+            volume.add_line([[length,width,0], [0,width,0]])           #
+            volume.add_line([[0,width,0], [0,0,0]])                     #
 
             volume.add_line([[0,0,height], [length,0,height]])           #
             volume.add_line([[length,0,height], [length,width,height]]) #
@@ -162,13 +88,21 @@ class CubeLines(Generator):
             volume.add_line([[0, width,0], [0,width,height]])           #
             volume.translate(-length/2, -width/2, -height/2)
 
+
+            rotate_x = random.uniform(-180, 180)
+            rotate_y = random.uniform(-180, 180)
+            rotate_z = random.uniform(-180, 180)
+            # volume.rotate(rotate_x, rotate_y, rotate_z)
+
             offset_x = random.uniform(-param_dict["bound_x"], param_dict["bound_x"])
             offset_y = random.uniform(-param_dict["bound_y"], param_dict["bound_y"])
             offset_z = random.uniform(-param_dict["bound_z"], param_dict["bound_z"])
             volume.translate(offset_x, offset_y, offset_z)
+
             volumes.append(volume)
 
         model = Model()
+
 
         fx = param_dict["frustrum"]
         fy = param_dict["frustrum"]
