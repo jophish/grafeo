@@ -88,3 +88,34 @@ GPGL generation:
   - for each subsequent point Dxy
 - Set pen down
 
+
+
+
+# Fonts
+
+# Adding a Font
+First, get the TTF file of the font you want.
+Then, run the script in ./scripts to generate the SVG file.
+Open the SVG file in fontforge, select all glyphs, and run Element -> Overlap -> Remove Overlap.
+Save the SVG file.
+
+- Font Models are "PolygonCollection" models
+- PolygonCollection models consist of any number of "Polygon" models
+  - It is assumed that none of these polygons intersect eachother
+- A Polygon model is a model with a single Line with the same start and end points with no self-intersections.
+
+How to hatch a Polygon:
+ - Get bounding box of polygon.
+ - Create a model of hatch lines to cover bounding box.
+ - Intersect the hatch line model and polygon model
+
+How to hatch a PolygonCollection model:
+ - For each Polygon, determine whether it should be hatched or not.
+   - This is the hard part
+ - Get the bounding box of the PolygonCollection.
+ - Create a model of hatch lines to cover the bounding box.
+ - Create a new PolygonCollection containing each of the Polygons to be hatched
+ - Intersect this with the hatch line model. Call the result "PartialHatched"
+ - At this point, areas where holes are may be hatched.
+ - Create a new PolygonCollection containing all the lines NOT to be hatched, call it "NotHatched"
+ - Get the symmetric difference of PartialHatched and NotHatched

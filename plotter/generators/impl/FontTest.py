@@ -6,6 +6,7 @@ from ...pens import Pen
 from ..Generator import Generator
 from ..Parameters import GeneratorParamGroup, IntParam, EnumParam
 from plotter.fonts.FontManager import FontManager
+from plotter.models.derived.Polygon import Polygon
 
 class FontTest(Generator):
     """
@@ -61,6 +62,12 @@ class FontTest(Generator):
         char_rows = [chars[i:i+per_row] for i in range(0, len(chars), per_row)]
         font_family = font_manager.get_font_family(param_dict['font'])
 
+        print('geting text model')
         text_model = font_family.get_text_model(char_rows)
-        print(text_model.get_bounding_box())
-        return text_model
+        print('done text model')
+
+        print('making polygon')
+        polygon = Polygon(text_model.models[0].models[0].lines[0], Pen.One)
+        polygon.hatch(Pen.One, 10, 45)
+
+        return polygon

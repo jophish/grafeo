@@ -4,6 +4,7 @@ from ...pens.Pen import Pen
 from ..BoundingBox import BoundingBox
 from .Atom import Atom
 import math
+import shapely
 
 class Point(Atom):
     """
@@ -33,6 +34,14 @@ class Point(Atom):
         self._bounding_box = BoundingBox(
             min_x=self.x, max_x=self.x, min_y=self.y, max_y=self.y
         )
+
+    def _make_shapely_geometry(self):
+        self._shapely_geometry = shapely.Point(self.x, self.y)
+
+    @property
+    def shapely_geometry(self):
+        self._make_shapely_geometry()
+        return self._shapely_geometry
 
     def is_within_bounds(self, bounding_box: BoundingBox) -> bool:
         """

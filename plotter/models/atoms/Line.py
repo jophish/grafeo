@@ -2,7 +2,7 @@ from ...pens import Pen
 from ..BoundingBox import BoundingBox
 from .Atom import Atom
 from .Point import Point
-
+import shapely
 
 class Line(Atom):
     """
@@ -25,6 +25,15 @@ class Line(Atom):
         self.points = [point.copy() for point in points]
         self.pen = pen
         self._bounding_box = self._make_bounding_box()
+
+    @property
+    def shapely_geometry(self):
+        self._make_shapely_geometry()
+        return self._shapely_geometry
+
+    def _make_shapely_geometry(self):
+        points = [[point.x, point.y] for point in self.points]
+        self._shapely_geometry = shapely.LineString(points)
 
     def copy(self) -> "Line":
         """Create a deep-copy of the current Line."""
@@ -70,14 +79,11 @@ class Line(Atom):
                     # the bounding box. Figure out which case we're in.
                     start_on_corner = bounding_box.point_is_on_corner(start_point.x, start_point.y)
                     if start_on_corner:
-                        print(intersections)
-                        print(start_point.x, start_point.y)
                         current_line_points.append(Point(start_point.x, start_point.y, self.pen))
                         current_line_points.append(Point(intersections[0][0], intersections[0][1], self.pen))
                         new_lines.append(Line(current_line_points, self.pen))
                         current_line_points = []
                     else:
-                        print('aaaaaaffffffffffffff')
                         current_line_points.append(Point(intersections[0][0], intersections[0][1], self.pen))
                         current_line_points.append(Point(end_point.x, end_point.y, self.pen))
                         new_lines.append(Line(current_line_points, self.pen))

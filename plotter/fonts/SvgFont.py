@@ -21,7 +21,7 @@ def midpoint(point1, point2):
 
 # https://xmlgraphics.apache.org/batik/tools/font-converter.html
 
-class SvgFont():
+class SvgFont(FontFamily):
     """
     Wrapper class to turn SVG files into FontCharacter objects.
     """
@@ -49,9 +49,9 @@ class SvgFont():
             x_offset = 0
             row_model = Model()
             for char in line:
-                glyph_map_key = f'{int(ord(char))}:0{4}x'.upper()
+                glyph_map_key = f'{int(ord(char)):0{4}x}'.upper()
                 glyph_name = self.glyph_map[glyph_map_key]
-                font_char = self.get_font_character(glyph_name)
+                font_char = self.get_font_character(glyph_name, char)
                 char_model = font_char.model.copy()
                 if not char_model.is_empty():
                     char_model.translate(x_offset, y_offset)
@@ -73,11 +73,17 @@ class SvgFont():
         self.descent = float(font_face_node['descent'])
         self.x_offset = float(font_node['horiz-adv-x'])
 
-    def get_font_character(self, glyph_name):
+
+    def get_font_character(self, glyph_name, char):
         if glyph_name in self.font_character_map:
             return self.font_character_map[glyph_name]
 
         glyph_node = self.font_tree.find('glyph', {'glyph-name': glyph_name})
+
+        # Some fonts use non-standatrd glyph names. Try looking at the unicode
+        # field instead.
+        if not glyph_node:
+            glyph_node = self.font_tree.find('glyph', {'unicode': char})
 
         model = Model()
 
@@ -109,6 +115,10 @@ class SvgFont():
 
         self.font_character_map[glyph_name] = FontCharacter(model, x_offset)
         return self.font_character_map[glyph_name]
+
+    @staticmethod
+    def group_polygons(polygons):
+        pass
 
     @staticmethod
     def get_paths(svg_path):

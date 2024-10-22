@@ -4,7 +4,7 @@ from .atoms.Line import Line
 from .atoms.Point import Point
 from .Bounded import Bounded
 from .BoundingBox import BoundingBox
-
+import shapely
 
 class Model(Bounded):
     """
@@ -13,14 +13,26 @@ class Model(Bounded):
     A scene consists of any number of Atoms, or, recursively, Models.
     """
 
-    def __init__(self):
+    def __init__(self, lines = None, points = None, models = None):
         """Initialize a model."""
-        self._lines: list[Line] = []
-        self._points: list[Point] = []
-        self._models: list["Model"] = []
+        self._lines: list[Line] = lines if lines else []
+        self._points: list[Point] = points if points else []
+        self._models: list["Model"] = models if models else []
         self._used_pens: set[Pen] = set()
         self._bounding_box = BoundingBox()
-        pass
+
+        for atom in self._lines + self._points + self._models:
+            self._update_bounding_box(atom)
+
+    def _make_shapely_geometry(self):
+        geometries = []
+        if len(self._points) > 0:
+            geometries.append(shapely.multipoints([point.shapely_geometry for point in self._points]))
+        if len(self._lines) > 0:
+            geometries.append(shapely.multilinestrings([line.shapely_geometry for line in self._lines]))
+        if len(self._models) > 0:
+            geometries.append(shapely.geometrycollections([model.shapely_geometry for model in self._models]))
+        self._shapely_geometry = shapely.GeometryCollection(geometries)
 
     def is_empty(self):
         return len(self.models) == 0 and len(self.lines) == 0 and len(self.points) == 0
@@ -35,20 +47,18 @@ class Model(Bounded):
             new_model.add_point(point.copy())
         return new_model
 
-    def intersection(self, bounding_box: BoundingBox) -> "Model":
+    def intersection(self, model: "Model") -> "Model":
         """
-        Return a new model, which represents the interserction of this model and a bounding box.
+        Return a new model, which represents the interserction of this model and another
+
+        Currently, this removes pen information. TODO: fix.
         """
         new_model = Model()
-        for point in self._points:
-            if point.is_within_bounds(bounding_box):
-                new_model.add_point(point)
-        for line in self._lines:
-            new_lines = line.intersection(bounding_box)
-            for new_line in new_lines:
-                new_model.add_line(new_line)
-        for model in self._models:
-            new_model.add_model(model.intersection(bounding_box))
+        shapely_intersection = self.shapely_geometry.intersection(model.shapely_geometry)
+        print(shapely_intersection.geom_type)
+        if shapely_intersection.geom_type == 'MultiLineString':
+            for line_string in shapely_intersection.geoms:
+                new_model.add_line(Line([Point(coord[0], coord[1], Pen.One) for coord in line_string.coords], Pen.One))
         return new_model
 
     def add_line(self, line: Line):
@@ -59,6 +69,11 @@ class Model(Bounded):
         """
         self._lines.append(line)
         self._update_bounding_box(line)
+
+    @property
+    def shapely_geometry(self):
+        self._make_shapely_geometry()
+        return self._shapely_geometry
 
     @property
     def lines(self):
