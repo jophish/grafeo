@@ -1,93 +1,76 @@
 from abc import ABC, abstractmethod
-from .Line import Line
-from enum import Enum
-from typing import TypedDict
+from typing import Any
 
-# ParamList is a type for describing user-definable parameters for art generators
-# ParamList maps param names to a tuple containing the param's shorthand code, description, and type
-ParamType = str | int | float | bool
-ParamList = dict[str, tuple[str, str, ParamType]]
-ParamValues = dict[str, ParamType]
+from ..models.Model import Model
+from .Parameters import GeneratorParamGroup
 
-class GeneratorConfig(TypedDict):
-    width: int
-    height: int
-    scale: float
 
-# The Generator class is the base class from which "art generators" inherit
-# Each instance should ultimately generate ""
 class Generator(ABC):
+    """
+    The Generator class provides an interface and framework for the generation of parameterized artwork.
 
+    A child subclassing the Generator class must implement the following two methods:
+    * `get_default_params`
+    * `_generate`
 
-    lines: list[Line] = []
-    param_list: ParamList = {}
-    param_values: ParamValues = {}
-    config: GeneratorConfig
-    name: str
+    `get_default_params` describes all the parameters available to this model, initialized to their default values.
+    `_generate` is responsible for actually generating artwork. When artwork is generated, `_generate` will be called
+    with the current values of the generator's parameters. `_generate` is expected to return a :class:`Model` object,
+    which represents a scene to be rendered.
 
-    def __init__(self, config: GeneratorConfig):
-        self.config = config
-        self.param_list = self.get_param_list()
+    :ivar name: The friendly name for this generator
+    :vartype name: str
+    :ivar model: The most-recently generated model produced by this generator
+    :vartype model: :class:`Model`
+    :ivar params: The parameters used for this model
+    :vartype params: :class:`GeneratorParamGroup`
+    """
+
+    def __init__(self, name: str):
+        """
+        Initialize a generator.
+
+        :param name: The friendly name for this generator
+        """
+        self.name: str = name
+        self.model = Model()
         self.reset_params()
 
     def generate(self):
-        self.lines = self.generate_lines(**self.param_values)
-        return self.lines
+        """
+        Generate using the current parameter values.
 
-    # Resets parameter values to defaults
+        This will update the `model` attribute of the generator.
+        """
+        self.model = Model()
+        self.model = self._generate(self.params.get_dict_values())
+        # For some unknown reason, this breaks shit if the model
+        # was not already fully within the +x/+y quadrant
+        # self.model.normalize()
+        return self.model
+
     def reset_params(self):
-        self.param_values = self.get_default_params()
+        """Reset parameter values to defaults."""
+        if not hasattr(self, "params"):
+            self.params: GeneratorParamGroup = self.get_default_params()
+        else:
+            self.params.reset()
 
-    # Returns the current parameter values
-    def get_param_values(self) -> ParamValues:
-        return self.param_values
-
-    # Sets the parameter with the given name to the given value
-    def set_param_value(self, param_name: str, param_value: ParamType):
-        self.param_values[param_name] = param_value
-
-    def set_param_values(self, param_values: ParamValues):
-        self.param_values = param_values
-
-    def get_name(self):
-        return self.name
-
-    def get_lines(self) -> list[Line]:
-        if not self.lines:
-            return None
-
-        return self.lines
-
-    # Main method for line generation
     @abstractmethod
-    def generate_lines(self, **kwargs):
+    def _generate(self, param_dict: dict[str, Any]) -> Model:
+        """
+        Generate a scene using provided parameters.
+
+        :param param_dict: A nested dictionary of the current parameter values
+        :return: A model representing the generated scene
+        """
         pass
 
-    # Gets the default parameters for this Generator
     @abstractmethod
-    def get_default_params(self) -> ParamValues:
+    def get_default_params(self) -> GeneratorParamGroup:
+        """
+        Get the parameters for this generator, initialized to their default values.
+
+        :return: An object describing the generator's parameters
+        """
         pass
-
-    # Gets information describing the parameters accepted by this Generator
-    @abstractmethod
-    def get_param_list(self) -> ParamList:
-        pass
-
-
-    def generate_gpgl(self):
-        if len(self.lines) == 0:
-            return None
-
-        gpgl = []
-        gpgl.append('H')
-
-        for line in self.lines:
-            points = line.get_points()
-            for i in range(len(points)):
-                if i == 0:
-                    # Using the y-component as-is results in a mirrored image about the horizontal axis;
-                    # flip it here...
-                    gpgl.append(f'M{round(points[i].x)},{self.config["height"]-round(points[i].y)}')
-                gpgl.append(f'D{round(points[i].x)},{self.config["height"]-round(points[i].y)}')
-
-        return gpgl

@@ -1,17 +1,18 @@
-from py5 import Sketch, Py5Vector
-from random import randint
-from main import run_prog
-from test import generate_line, sample_spline
 import math
+from random import randint
+from test import generate_line, sample_spline
+
 from LineGenerator import NoiseLineGenerator
+from main import run_prog
+from py5 import Py5Vector, Sketch
 
 WIDTH = 16640
 HEIGHT = 10720
 
-SCALE = .1
+SCALE = 0.1
+
 
 class TestSketch(Sketch):
-
     gpgl = []
     lines = []
     shapes = []
@@ -23,7 +24,7 @@ class TestSketch(Sketch):
         self.gpgl = nlg.generate_gpgl()
 
     def settings(self):
-        self.size(round(WIDTH*SCALE), round(HEIGHT*SCALE))
+        self.size(round(WIDTH * SCALE), round(HEIGHT * SCALE))
 
     def setup(self):
         for line in self.lines:
@@ -52,19 +53,25 @@ class TestSketch(Sketch):
     def make_incremental_gpgl(self, curve, translation_x, translation_y):
         for i in range(curve.get_vertex_count()):
             if i == 0:
-                self.gpgl.append(f'M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
-            self.gpgl.append(f'D{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
+                self.gpgl.append(
+                    f"M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}"
+                )
+            self.gpgl.append(
+                f"D{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}"
+            )
 
     def make_gpgl(self, curve, translation_x, translation_y):
-        command = 'D'
+        command = "D"
 
         for i in range(curve.get_vertex_count()):
             if i == 0:
-                self.gpgl.append(f'M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}')
+                self.gpgl.append(
+                    f"M{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}"
+                )
 
-            command += f'{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}'
+            command += f"{round(curve.get_vertex(i).x + translation_x)},{round(curve.get_vertex(i).y + translation_y)}"
             if i != (curve.get_vertex_count() - 1):
-                command += ','
+                command += ","
 
         self.gpgl.append(command)
 
@@ -72,10 +79,10 @@ class TestSketch(Sketch):
         s = self.create_shape()
         s.begin_shape()
         s.curve_tightness(tightness)
-        max_rand_mag = 2*(WIDTH/n_points)
+        max_rand_mag = 2 * (WIDTH / n_points)
         for i in range(n_points):
-            rand_mag = round((i/n_points)*max_rand_mag)
-            x = (i * (WIDTH/n_points)) + randint(-rand_mag, rand_mag)
+            rand_mag = round((i / n_points) * max_rand_mag)
+            x = (i * (WIDTH / n_points)) + randint(-rand_mag, rand_mag)
             y = height + randint(-rand_mag, rand_mag)
             s.curve_vertex(x, y)
 
@@ -85,10 +92,10 @@ class TestSketch(Sketch):
     def make_line(self, height, n_points):
         s = self.create_shape()
         s.begin_shape()
-        max_rand_mag = 2*(WIDTH/n_points)
+        max_rand_mag = 2 * (WIDTH / n_points)
         for i in range(n_points):
-            rand_mag = round((i/n_points)*max_rand_mag)
-            x = (i * (WIDTH/n_points)) + randint(-rand_mag, rand_mag)
+            rand_mag = round((i / n_points) * max_rand_mag)
+            x = (i * (WIDTH / n_points)) + randint(-rand_mag, rand_mag)
             y = height + randint(-rand_mag, rand_mag)
             s.vertex(x, y)
         s.end_shape()
@@ -109,9 +116,8 @@ class TestSketch(Sketch):
 
         for i in range(num_corners):
             v1 = shape.get_vertex(i)
-            v2 = shape.get_vertex((i+1) % shape.get_vertex_count())
+            v2 = shape.get_vertex((i + 1) % shape.get_vertex_count())
             new_points = self.chaikin_cut(v1, v2, ratio)
-
 
             if (not close) and (i == 0):
                 next_shape.vertex(v1.x, v1.y)
@@ -123,7 +129,7 @@ class TestSketch(Sketch):
                 next_shape.vertex(new_points[0].x, new_points[0].y)
                 next_shape.vertex(new_points[1].x, new_points[1].y)
 
-        if (close):
+        if close:
             next_shape.end_shape(self.CLOSE)
         else:
             next_shape.end_shape()
@@ -133,7 +139,7 @@ class TestSketch(Sketch):
     def chaikin_cut(self, v1, v2, ratio):
         new_points = []
 
-        if (ratio > 0.5):
+        if ratio > 0.5:
             ratio = 1 - ratio
 
         x = self.lerp(v1.x, v2.x, ratio)
@@ -152,6 +158,7 @@ class TestSketch(Sketch):
     def chaikin_open(self, shape, ratio, iterations):
         return self.chaikin(shape, ratio, iterations, False)
 
+
 def main():
     sketch = TestSketch()
     sketch.run_sketch(block=False)
@@ -159,5 +166,6 @@ def main():
     print(sketch.gpgl[:6])
     input()
     run_prog(sketch.gpgl)
+
 
 main()

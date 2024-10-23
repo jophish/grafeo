@@ -1,18 +1,19 @@
-from py5 import Sketch
+from random import randint
+from time import sleep, time
+
 import serial
 from serial import EIGHTBITS, PARITY_EVEN, STOPBITS_TWO
-from time import sleep
-from time import time
-from random import randint
+
 
 def fmt(string):
-    return string.encode()+b'\x03'
+    return string.encode() + b"\x03"
+
 
 def read_gpgl(file_path):
     commands = []
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         contents = f.read()
-        commands = contents.split('\x03')
+        commands = contents.split("\x03")
     return commands
 
 
@@ -28,10 +29,10 @@ def main_old():
 
     start_time = time()
     for i in range(50):
-        new_x = randint(0,10000)
-        new_y = randint(0,10000)
+        new_x = randint(0, 10000)
+        new_y = randint(0, 10000)
 
-        raw_string = f'D{prev_x}, {prev_y}, {new_x}, {new_y}'
+        raw_string = f"D{prev_x}, {prev_y}, {new_x}, {new_y}"
         string = fmt(raw_string)
 
         prev_x = new_x
@@ -44,17 +45,18 @@ def main_old():
 
         end_time = time()
 
-        print(f'TOTAL TIME: {end_time-start_time}')
+        print(f"TOTAL TIME: {end_time-start_time}")
+
 
 def run_prog(gpgl, pen_config):
     ser = serial.Serial(
-        port='/dev/ttyUSB0',
+        port="/dev/ttyUSB0",
         baudrate=9600,
         bytesize=EIGHTBITS,
         parity=PARITY_EVEN,
         stopbits=STOPBITS_TWO,
         timeout=1,
-        xonxoff=True
+        xonxoff=True,
     )
 
     ser.write(fmt(":"))
@@ -62,18 +64,21 @@ def run_prog(gpgl, pen_config):
     ser.write(fmt("M0, 0"))
 
     for i in range(len(gpgl)):
-        if gpgl[i][:2] == 'PR':
-            print('Once plotting has paused, please replace pen!')
+        if gpgl[i][:2] == "PR":
+            print("Once plotting has paused, please replace pen!")
             new_pen_num = gpgl[i][2]
             new_pen_config = pen_config[str(new_pen_num)]
             print(f'  Pen to load: {new_pen_config["descr"]}')
             print(f'  Slot to load in: {new_pen_config["location"]}')
-            ser.write(fmt('J0'))
-            input('Press enter to continue')
+            ser.write(fmt("J0"))
+            input("Press enter to continue")
 
         ser.write(fmt(gpgl[i]))
-        print(f'{round(i/len(gpgl)*100, 2)}%')
+        print(f"{round(i/len(gpgl)*100, 2)}%")
+
 
 def main():
-    gpgl = read_gpgl('./sq-inkcut-1677037622.gpgl')
-    run_prog(gpgl)
+    gpgl = read_gpgl("./gpgl/inkcut-1677023683.gpgl")
+    run_prog(gpgl, [])
+
+main()
