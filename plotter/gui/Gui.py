@@ -131,10 +131,23 @@ class Gui:
                             thickness=pen_config["weight"],
                         )
 
-            self._apply_print_preview_transforms()
+            self._apply_print_preview_transforms(
+                Tags.PRINT_PREVIEW_NODE_DRAW,
+                self.generator_manager.current_generator.model,
+            )
 
-    def _apply_print_preview_transforms(self):
-        if not dpg.does_item_exist(Tags.PRINT_PREVIEW_NODE_DRAW):
+    def _apply_print_preview_transforms(
+            self,
+            tag,
+            model,
+            translate_x,
+            translate_y
+    ):
+        """
+        :param tag: Tag to apply transforms to
+        :param model: Model associated with the given tag
+        """
+        if not dpg.does_item_exist(tag):
             return
 
         print_settings = self.config_manager.get_print_settings()
@@ -156,7 +169,7 @@ class Gui:
         margin_x_px = frac_marg_x * draw_width
         margin_y_px = frac_marg_y * draw_height
 
-        bounding_box = self.generator_manager.current_generator.model.get_bounding_box()
+        bounding_box = model.get_bounding_box()
         width = bounding_box.max_x - bounding_box.min_x
         height = bounding_box.max_y - bounding_box.min_y
 
@@ -166,9 +179,6 @@ class Gui:
             draw_width - (margin_x_px * 2),
             draw_height - (margin_y_px * 2),
         )
-
-        model = self.generator_manager.current_generator.model
-        bounding_box = model.get_bounding_box()
 
         bounding_box_center_x = (bounding_box.max_x + bounding_box.min_x) / 2
         bounding_box_center_y = (bounding_box.max_y + bounding_box.min_y) / 2
@@ -214,7 +224,7 @@ class Gui:
         )
 
         dpg.apply_transform(
-            Tags.PRINT_PREVIEW_NODE_DRAW,
+            tag,
             translate_matrix * rot_matrix * init_scale_matrix * origin_translate_matrix,
         )
 
