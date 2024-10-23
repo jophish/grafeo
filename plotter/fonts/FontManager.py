@@ -6,7 +6,6 @@ from plotter.fonts.SvgFont import SvgFont
 
 
 glyph_map_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'aglfn.txt')
-ttx_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ttf/')
 svg_dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'svg/')
 
 class Singleton(object):
@@ -22,7 +21,7 @@ class FontManager(Singleton):
         # Map from font names to FontFamily objects
         self.font_map = {}
         self.font_names = []
-        
+
         self.load_glyph_map()
         self.load_font_names()
 
