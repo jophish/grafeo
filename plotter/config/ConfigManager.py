@@ -108,6 +108,14 @@ class ConfigManager:
         """
         return self.config["print_settings"]
 
+    def get_title_settings(self) -> dict[str, Any]:
+        """
+        Return the current title settings.
+
+        :return: Current title settings
+        """
+        return self.config["title_settings"]
+
     def get_serial_settings(self) -> dict[str, Any]:
         """
         Return the current serial settings.
@@ -124,6 +132,16 @@ class ConfigManager:
         :param value: Value of parameter to update
         """
         self.config["print_settings"][name] = value
+        self.write_config_to_disk()
+
+    def update_title_setting(self, title_type: str, name: str, value: Any):
+        """
+        Update an individual title setting.
+
+        :param name: Name of parameter to update
+        :param value: Value of parameter to update
+        """
+        self.config["title_settings"][title_type][name] = value
         self.write_config_to_disk()
 
     def _get_default_pen_index(self) -> int:
@@ -320,6 +338,32 @@ class ConfigManager:
                 "translate_x": 0,
                 "translate_y": 0,
             },
+            "title_settings": {
+                "title": {
+                    "show": False,
+                    "font": "Helvetica",
+                    "value": "Title goes here",
+                    "hatch": False,
+                    "hatch_angle": 45,
+                    "hatch_spacing": 10,
+                    "height": 30,
+                    "rotation": 0,
+                    "translate_x": 0,
+                    "translate_y": 0,
+                },
+                "subtitle": {
+                    "show": False,
+                    "font": "Helvetica",
+                    "value": "Subitle goes here",
+                    "hatch": False,
+                    "hatch_angle": 45,
+                    "hatch_spacing": 10,
+                    "height": 15,
+                    "rotation": 0,
+                    "translate_x": 0,
+                    "translate_y": -45,
+                }
+            }
         }
         self.config = default_config
         self.write_config_to_disk()

@@ -105,8 +105,8 @@ class SerialPrinter():
 
         bounding_box = model.get_bounding_box()
 
-        # - Finally, translate back into place in +x/+y quadrant
-        model.translate(print_settings["max_x_coord"]/2, print_settings["max_y_coord"]/2)
+        # - Finally, translate back into place in +x/+y quadrant, taking into account additional translations
+        model.translate(print_settings["max_x_coord"]/2 + print_settings['translate_x'], print_settings["max_y_coord"]/2 + print_settings['translate_y'])
         bounding_box = model.get_bounding_box()
 
         model_lines = model.all_lines
