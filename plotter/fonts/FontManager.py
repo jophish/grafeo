@@ -21,12 +21,14 @@ class FontManager(Singleton):
         self.glyph_map = {}
         # Map from font names to FontFamily objects
         self.font_map = {}
-
+        self.font_names = []
+        
         self.load_glyph_map()
-        self.load_font_map()
+        self.load_font_names()
+
 
     def get_fonts(self):
-        return list(self.font_map.keys())
+        return self.font_names
 
     def load_glyph_map(self):
         with open(glyph_map_file_path, 'r') as f:
@@ -35,11 +37,14 @@ class FontManager(Singleton):
                 parts = line.split(';')
                 self.glyph_map[parts[0]] = parts[1]
 
-    def load_font_map(self):
+    def load_font_names(self):
         for file_name in os.listdir(svg_dir_path):
             font_name = file_name.split('.')[0]
-            self.font_map[font_name] = SvgFont(os.path.join(svg_dir_path, file_name), self.glyph_map)
+            self.font_names.append(font_name)
 
     def get_font_family(self, font_name):
+      if font_name in self.font_map:
         return self.font_map[font_name]
+      self.font_map[font_name] = SvgFont(os.path.join(svg_dir_path, font_name + '.svg'), self.glyph_map)
+      return self.font_map[font_name]
 

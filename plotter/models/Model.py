@@ -1,16 +1,17 @@
 from ..pens.Pen import Pen
-from .atoms.Atom import Atom
 from .atoms.Line import Line
 from .atoms.Point import Point
 from .Bounded import Bounded
 from .BoundingBox import BoundingBox
+from abc import abstractmethod
 import shapely
 
-class Model(Bounded):
+class BaseModel(Bounded):
     """
-    The Model class is used to model a generated scene.
+    The BaseModel class provides a core framework for generating a scene.
 
-    A scene consists of any number of Atoms, or, recursively, Models.
+    This base class equips all subclassess with the facilities to
+    render points, lines, and models (recursively).
     """
 
     def __init__(self, lines = None, points = None, models = None):
@@ -24,30 +25,35 @@ class Model(Bounded):
         for atom in self._lines + self._points + self._models:
             self._update_bounding_box(atom)
 
+    @abstractmethod
     def _make_shapely_geometry(self):
-        geometries = []
-        if len(self._points) > 0:
-            geometries.append(shapely.multipoints([point.shapely_geometry for point in self._points]))
-        if len(self._lines) > 0:
-            geometries.append(shapely.multilinestrings([line.shapely_geometry for line in self._lines]))
-        if len(self._models) > 0:
-            geometries.append(shapely.geometrycollections([model.shapely_geometry for model in self._models]))
-        self._shapely_geometry = shapely.GeometryCollection(geometries)
+        """
+        Create the shapely geometry for this model.
+
+        This is an abstract method since subclasses may wish to generate
+        specific types of geometries, which enable certain operations
+        (such as contains, intersection) to behave more intelligently.
+
+        For example, if a subclass represents a polygon with holes, this
+        method should create a shapely.Polygon object with explicit
+        reference to the outline and hole geometries.
+        """
+        pass
 
     def is_empty(self):
         return len(self.models) == 0 and len(self.lines) == 0 and len(self.points) == 0
 
-    def copy(self) -> "Model":
-        new_model = Model()
-        for model in self.models:
-            new_model.add_model(model.copy())
-        for line in self.lines:
-            new_model.add_line(line.copy())
-        for point in self.points:
-            new_model.add_point(point.copy())
-        return new_model
+    @abstractmethod
+    def copy(self) -> "BaseModel":
+        """
+        Create a copy of the model with new objects.
 
-    def intersection(self, model: "Model") -> "Model":
+        This is an abstract method since subclasses may include more bookkeeping
+        and require different initialization than this base class.
+        """
+        pass
+
+    def intersection(self, model: "BaseModel") -> "BaseModel":
         """
         Return a new model, which represents the interserction of this model and another
 
@@ -55,11 +61,13 @@ class Model(Bounded):
         """
         new_model = Model()
         shapely_intersection = self.shapely_geometry.intersection(model.shapely_geometry)
-        print(shapely_intersection.geom_type)
         if shapely_intersection.geom_type == 'MultiLineString':
             for line_string in shapely_intersection.geoms:
                 new_model.add_line(Line([Point(coord[0], coord[1], Pen.One) for coord in line_string.coords], Pen.One))
         return new_model
+
+    def contains(self, model: "BaseModel"):
+        return self.shapely_geometry.contains(model.shapely_geometry)
 
     def add_line(self, line: Line):
         """
@@ -72,6 +80,12 @@ class Model(Bounded):
 
     @property
     def shapely_geometry(self):
+        """
+        Return a shapely geometry for the model.
+
+        This is a property so that we can lazily generate the geometry
+        in an opaque way.
+        """
         self._make_shapely_geometry()
         return self._shapely_geometry
 
@@ -106,7 +120,7 @@ class Model(Bounded):
         """
         self._points.append(point)
 
-    def add_model(self, model: "Model"):
+    def add_model(self, model: "BaseModel"):
         """
         Add a sub-model to this model.
 
@@ -217,3 +231,29 @@ class Model(Bounded):
         for model in self._models:
             model.apply_matrix(matrix)
         self._bounding_box = self.make_bounding_box()
+
+
+class Model(BaseModel):
+    def __init__(self, *args, **kwargs):
+        """Initialize the class."""
+        super().__init__(*args, **kwargs)
+
+    def _make_shapely_geometry(self):
+        geometries = []
+        if len(self._points) > 0:
+            geometries.append(shapely.multipoints([point.shapely_geometry for point in self._points]))
+        if len(self._lines) > 0:
+            geometries.append(shapely.multilinestrings([line.shapely_geometry for line in self._lines]))
+        if len(self._models) > 0:
+            geometries.append(shapely.geometrycollections([model.shapely_geometry for model in self._models]))
+        self._shapely_geometry = shapely.GeometryCollection(geometries)
+
+    def copy(self) -> "Model":
+        new_model = Model()
+        for model in self.models:
+            new_model.add_model(model.copy())
+        for line in self.lines:
+            new_model.add_line(line.copy())
+        for point in self.points:
+            new_model.add_point(point.copy())
+        return new_model

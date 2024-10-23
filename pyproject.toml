@@ -23,6 +23,7 @@ bs4 = "^0.0.2"
 lxml = "^5.3.0"
 bezier = "^2024.6.20"
 svg-path = "^6.3"
+networkx = "^3.4.2"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -72,8 +72,7 @@ y of the current parameter values
                 random_x = random.uniform(-i*param_dict["dims_random_scaling"], i*param_dict["dims_random_scaling"])
                 random_y = random.uniform(-i*param_dict["dims_random_scaling"], i*param_dict["dims_random_scaling"])
 
-                box = Box(size + random_x, size + random_y, (size + random_x)/2, (size + random_y)/2)
-                box.draw_outline(Pen.One)
+                box = Box(size + random_x, size + random_y, (size + random_x)/2, (size + random_y)/2, Pen.One)
 
                 # Random chance to hatch. Hatching is less likely on higher rows, and the spacing will be larger, typically
                 value = random.randint(0, 100)

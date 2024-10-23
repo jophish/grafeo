@@ -47,8 +47,7 @@ class HatchingTest(Generator):
         :return: A model representing the generated scene
         """
         model = Model()
-        box = Box(200, 400, 10, 10)
-        box.draw_outline(Pen.One)
+        box = Box(200, 400, 10, 10, Pen.One)
         box.hatch(Pen.One, param_dict["angle"], param_dict["spacing"])
         model.add_model(box)
 
