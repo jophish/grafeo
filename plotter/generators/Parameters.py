@@ -28,6 +28,7 @@ class ParamType(Enum):
     Int = int
     Float = float
     Enum = str
+    Bool = bool
 
 
 T = TypeVar("T")
@@ -189,6 +190,39 @@ class GeneratorParam(ABC, Generic[T]):
         Raises an :class:`InvalidParamValueException` when checks fail.
 
         :raises InvalidParamValueException: Validation checks fail
+
+        :param value: The value to validate
+        """
+        pass
+
+
+class BoolParam(GeneratorParam[bool]):
+    """
+    A parameter taking a boolean value.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        default_value: bool
+    ):
+        """
+        Initialize a boolean generator param.
+
+        :param name: The name of this parameter
+        :param description: A human-readable description of this parameter
+        :param default_value: The default value of this parameter
+        """
+        super().__init__(name, description, ParamType.Bool, default_value)
+
+    def _validate_param_value(self, value: bool):
+        """
+        Validate that a value is within the parameter's bounds.
+
+        Raises a :class:`InvalidParamValueException` when checks fail.
+
+        :raises InvalidParamValueException: Value is outside parameter's bounds
 
         :param value: The value to validate
         """
