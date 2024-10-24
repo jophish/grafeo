@@ -346,10 +346,11 @@ class ConfigManager:
                     "hatch": False,
                     "hatch_angle": 45,
                     "hatch_spacing": 10,
-                    "height": 30,
+                    "scale": 1,
                     "rotation": 0,
                     "translate_x": 0,
                     "translate_y": 0,
+                    "pen": "Micron 005 Black",
                 },
                 "subtitle": {
                     "show": False,
@@ -358,10 +359,11 @@ class ConfigManager:
                     "hatch": False,
                     "hatch_angle": 45,
                     "hatch_spacing": 10,
-                    "height": 15,
+                    "scale": 1,
                     "rotation": 0,
                     "translate_x": 0,
                     "translate_y": -45,
+                    "pen": "Micron 005 Black",
                 }
             }
         }

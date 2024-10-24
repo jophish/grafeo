@@ -11,6 +11,7 @@ from plotter.generators.Parameters import EnumParam, FloatParam, IntParam
 from plotter.gui.Tags import Tags
 from plotter.printers.SerialPrinter import SerialPrinter
 from plotter.utils.scaling import scale_to_fit
+from plotter.utils.debounce import debounce
 
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
@@ -49,10 +50,29 @@ class Gui:
 
         self.font_manager = FontManager()
 
-        self.title = None
-        self.subtitle = None
+        self.title_model = None
+        self.subtitle_model = None
 
+        self._render_titles()
         self.modal_visible = False
+
+    def _render_titles(self):
+        title_settings = self.config_manager.get_title_settings()
+
+        models = []
+        for item in ["title", "subtitle"]:
+            hatch_angle = title_settings[item]['hatch_angle']
+            hatch_spacing = title_settings[item]['hatch_spacing']
+            should_hatch = title_settings[item]['hatch']
+            font_family = self.font_manager.get_font_family(title_settings[item]['font'])
+            model = font_family.get_text_model(
+                [title_settings[item]['value']],
+                hatch_angle if should_hatch else None,
+                hatch_spacing if should_hatch else None,
+            )
+            models.append(model)
+        self.title_model = models[0]
+        self.subtitle_model = models[1]
 
     def _render_print_preview(self):
         print_settings = self.config_manager.get_print_settings()
@@ -131,17 +151,81 @@ class Gui:
                             thickness=pen_config["weight"],
                         )
 
-            self._apply_print_preview_transforms(
-                Tags.PRINT_PREVIEW_NODE_DRAW,
-                self.generator_manager.current_generator.model,
-            )
+                self._draw_title_and_subtitle()
+
+            self._apply_all_print_preview_transforms()
+
+    def _draw_title_and_subtitle(self):
+        title_settings = self.config_manager.get_title_settings()
+
+        pens = self.config_manager.get_available_pen_configs()
+        if dpg.does_item_exist(Tags.PRINT_PREVIEW_TITLE_NODE_DRAW):
+            dpg.delete_item(Tags.PRINT_PREVIEW_TITLE_NODE_DRAW)
+        if dpg.does_item_exist(Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW):
+            dpg.delete_item(Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW)
+
+        with dpg.draw_node(parent=Tags.PRINT_PREVIEW_IMAGE, tag=Tags.PRINT_PREVIEW_TITLE_NODE_DRAW, show=title_settings['title']['show']):
+            for line in self.title_model.all_lines:
+                pen_config = pens[self.config_manager.get_pen_index_by_desc(title_settings['title']['pen'])]
+                r, g, b, a = bytes.fromhex(pen_config["color"][1:])
+                dpg.draw_polyline(
+                    [(point.x, point.y) for point in line.points],
+                    color=(r, g, b, a),
+                    thickness=pen_config["weight"],
+                )
+
+        with dpg.draw_node(parent=Tags.PRINT_PREVIEW_IMAGE, tag=Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW, show=title_settings['subtitle']['show']):
+            for line in self.subtitle_model.all_lines:
+                pen_config = pens[self.config_manager.get_pen_index_by_desc(title_settings['subtitle']['pen'])]
+                r, g, b, a = bytes.fromhex(pen_config["color"][1:])
+                dpg.draw_polyline(
+                    [(point.x, point.y) for point in line.points],
+                    color=(r, g, b, a),
+                    thickness=pen_config["weight"],
+                )
+
+    def _apply_all_print_preview_transforms(self):
+        print_settings = self.config_manager.get_print_settings()
+        title_settings = self.config_manager.get_title_settings()
+
+        # Transform the actual generator model into place
+        self._apply_print_preview_transforms(
+            Tags.PRINT_PREVIEW_NODE_DRAW,
+            self.generator_manager.current_generator.model,
+            print_settings['translate_x'],
+            print_settings['translate_y'],
+            print_settings['scale'],
+            print_settings['rotation'],
+        )
+
+        # Transform title model into place
+        self._apply_print_preview_transforms(
+            Tags.PRINT_PREVIEW_TITLE_NODE_DRAW,
+            self.title_model,
+            title_settings['title']['translate_x'],
+            title_settings['title']['translate_y'],
+            title_settings['title']['scale'],
+            title_settings['title']['rotation'],
+        )
+
+        # Transform subtitle model into place
+        self._apply_print_preview_transforms(
+            Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW,
+            self.subtitle_model,
+            title_settings['subtitle']['translate_x'],
+            title_settings['subtitle']['translate_y'],
+            title_settings['subtitle']['scale'],
+            title_settings['subtitle']['rotation'],
+        )
 
     def _apply_print_preview_transforms(
             self,
             tag,
             model,
             translate_x,
-            translate_y
+            translate_y,
+            scale,
+            rotation,
     ):
         """
         :param tag: Tag to apply transforms to
@@ -197,7 +281,7 @@ class Gui:
             draw_height - margin_y_px * 2,
         )
         init_scale = scaled_x / (bounding_box.max_x - bounding_box.min_x)
-        print_scale = print_settings["scale"]
+        print_scale = scale
         # Note the negative y-axis scaling factor. This is necessary, since the coordinate system
         # in dpg has a different origin definition than we do... I think.
         init_scale_matrix = dpg.create_scale_matrix(
@@ -206,15 +290,15 @@ class Gui:
 
         # First, translate about z-axis
         rot_matrix = dpg.create_rotation_matrix(
-            math.pi * print_settings["rotation"] / 180.0, [0, 0, -1]
+            math.pi * rotation / 180.0, [0, 0, -1]
         )
 
         # Then, translate into place, taking into account additional translations
         scaled_translation_x = (
-            print_settings["translate_x"] / print_settings["max_x_coord"] * draw_width
+            translate_x / print_settings["max_x_coord"] * draw_width
         )
         scaled_translation_y = (
-            print_settings["translate_y"] / print_settings["max_y_coord"] * draw_height
+            translate_y / print_settings["max_y_coord"] * draw_height
         )
         translate_matrix = dpg.create_translation_matrix(
             (
@@ -235,13 +319,55 @@ class Gui:
     @_wrap_callback
     def _print_callback(self, app_data, user_data):
         model = self.generator_manager.current_generator.model
-        self.printer.begin_print(
+        title_settings = self.config_manager.get_title_settings()
+        print_settings = self.config_manager.get_print_settings()
+        self.printer.add_to_print(
             model,
             self.config_manager.get_pen_map(
                 self.config_manager.get_current_generator(), model.get_used_pens()
             ),
-            self.config_manager.get_print_settings(),
+            print_settings,
+            print_settings['translate_x'],
+            print_settings['translate_y'],
+            print_settings['scale'],
+            print_settings['rotation'],
         )
+
+        if title_settings['title']['show']:
+            pen_num = str(list(self.title_model.get_used_pens())[0].value)
+            pen_index = self.config_manager.get_pen_index_by_desc(title_settings['title']['pen'])
+            pen_config = self.config_manager.get_available_pen_configs()[pen_index]
+            pen_map = {
+                pen_num: pen_config
+            }
+            self.printer.add_to_print(
+                self.title_model,
+                pen_map,
+                print_settings,
+                title_settings['title']['translate_x'],
+                title_settings['title']['translate_y'],
+                title_settings['title']['scale'],
+                title_settings['title']['rotation'],
+            )
+
+        if title_settings['subtitle']['show']:
+            pen_num = str(list(self.subtitle_model.get_used_pens())[0].value)
+            pen_index = self.config_manager.get_pen_index_by_desc(title_settings['subtitle']['pen'])
+            pen_config = self.config_manager.get_available_pen_configs()[pen_index]
+            pen_map = {
+                pen_num: pen_config
+            }
+            self.printer.add_to_print(
+                self.subtitle_model,
+                pen_map,
+                print_settings,
+                title_settings['subtitle']['translate_x'],
+                title_settings['subtitle']['translate_y'],
+                title_settings['subtitle']['scale'],
+                title_settings['subtitle']['rotation'],
+            )
+
+        self.printer.begin_print()
         pass
 
     @_wrap_callback
@@ -274,7 +400,7 @@ class Gui:
     @_wrap_callback
     def _update_print_layout_callback(self, param_value, param_name):
         self.config_manager.update_print_setting(param_name, param_value)
-        self._apply_print_preview_transforms()
+        self._apply_all_print_preview_transforms()
 
     def _make_parameter_group(self, param_group: GeneratorParamGroup):
         for name, param in param_group.params.items():
@@ -468,41 +594,77 @@ class Gui:
                         default_value=default_print_settings["translate_y"],
                     )
 
+    @debounce(.5)
+    def _rerender_title(self):
+        self._render_titles()
+        self._draw_title_and_subtitle()
+        self._apply_all_print_preview_transforms()
+
     @_wrap_callback
     def _update_title_callback(self, param_value, param_name):
+        """
+        param_name is a list containing:
+        * title/subtitle
+        * param name
+        * requires_rerender
+        """
         self.config_manager.update_title_setting(param_name[0], param_name[1], param_value)
-        self._apply_print_preview_transforms()
+
+        if param_name[0] == 'title' and param_name[1] == 'show':
+            dpg.configure_item(Tags.PRINT_PREVIEW_TITLE_NODE_DRAW, show=param_value)
+        elif param_name[0] == 'subtitle' and param_name[1] == 'show':
+            dpg.configure_item(Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW, show=param_value)
+        elif param_name[2]:
+            # We need to re-render. Only re-render the title and subtitle.
+            self._rerender_title()
+        else:
+            self._apply_all_print_preview_transforms()
 
     def _make_title_settings_section(self):
         # Options relating to print layout
         print_settings = self.config_manager.get_print_settings()
         title_settings = self.config_manager.get_title_settings()
+        available_pen_configs = self.config_manager.get_available_pen_configs()
         fonts = self.font_manager.get_fonts()
 
         def make_section(text_item):
             with dpg.collapsing_header(label=text_item, indent=20):
                 dpg.add_text(default_value=f'show {text_item}', color=(204, 36, 29))
                 dpg.add_checkbox(
-                    user_data=(text_item, "show"),
+                    user_data=(text_item, "show", False),
                     callback=self._update_title_callback,
                     default_value=title_settings[text_item]['show'],
                 )
+                dpg.add_text(default_value='value', color=(204, 36, 29))
+                dpg.add_input_text(
+                    user_data=(text_item, "value", True),
+                    hint=f'enter {text_item} here',
+                    callback=self._update_title_callback,
+                    default_value=title_settings[text_item]['value'],
+                )
                 dpg.add_text(default_value="font", color=(204, 36, 29))
                 dpg.add_combo(
-                    user_data=("title", "font"),
+                    user_data=(text_item, "font", True),
                     items=fonts,
                     callback=self._update_title_callback,
                     default_value=title_settings[text_item]['font'],
                 )
+                dpg.add_text(default_value="pen", color=(204, 36, 29))
+                dpg.add_combo(
+                    user_data=(text_item, "pen", True),
+                    items=[config["descr"] for config in available_pen_configs],
+                    callback=self._update_title_callback,
+                    default_value=title_settings[text_item]['pen'],
+                )
                 dpg.add_text(default_value='hatch', color=(204, 36, 29))
                 dpg.add_checkbox(
-                    user_data=(text_item, "hatch"),
+                    user_data=(text_item, "hatch", True),
                     callback=self._update_title_callback,
                     default_value=title_settings[text_item]['hatch'],
                 )
                 dpg.add_text(default_value="hatch angle", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "hatch_angle"),
+                    user_data=(text_item, "hatch_angle", True),
                     callback=self._update_title_callback,
                     default_value=title_settings[text_item]['hatch_angle'],
                     min_value=-180,
@@ -510,23 +672,23 @@ class Gui:
                 )
                 dpg.add_text(default_value="hatch spacing", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "hatch_spacing"),
+                    user_data=(text_item, "hatch_spacing", True),
                     callback=self._update_title_callback,
                     default_value=title_settings[text_item]['hatch_spacing'],
                     min_value=1,
                     max_value=200,
                 )
-                dpg.add_text(default_value="height", color=(204, 36, 29))
+                dpg.add_text(default_value="scale", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "height"),
+                    user_data=(text_item, "scale", False),
                     callback=self._update_title_callback,
-                    default_value=title_settings[text_item]['height'],
-                    min_value=1,
-                    max_value=300,
+                    default_value=title_settings[text_item]['scale'],
+                    min_value=0,
+                    max_value=1,
                 )
                 dpg.add_text(default_value="rotation", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "rotation"),
+                    user_data=(text_item, "rotation", False),
                     callback=self._update_title_callback,
                     min_value=0,
                     max_value=360,
@@ -534,15 +696,15 @@ class Gui:
                 )
                 dpg.add_text(default_value="translate_x", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "translate_x"),
+                    user_data=(text_item, "translate_x", False),
                     callback=self._update_title_callback,
-                    min_value=-print_settings["max_y_coord"] / 2,
-                    max_value=print_settings["max_y_coord"] / 2,
+                    min_value=-print_settings["max_x_coord"] / 2,
+                    max_value=print_settings["max_x_coord"] / 2,
                     default_value=title_settings[text_item]['translate_x'],
                 )
                 dpg.add_text(default_value="translate_y", color=(204, 36, 29))
                 dpg.add_slider_float(
-                    user_data=("title", "translate_y"),
+                    user_data=(text_item, "translate_y", False),
                     callback=self._update_title_callback,
                     min_value=-print_settings["max_y_coord"] / 2,
                     max_value=print_settings["max_y_coord"] / 2,
