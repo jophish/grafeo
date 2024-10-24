@@ -129,3 +129,13 @@ Subsequent generations are overlaid on top of the previously printed stuff, so y
 Whenever you print, only the currently generated model is printed, not the already printed stuff.
 
 Can perhaps optimize this. e.g., don't need to actually print things before adding additional models to the queue.
+
+
+TODO:
+
+- Load/Save files
+  - Each file contains serialized model, current generation params, print settings (rot/scale/translation), title settings
+- Export SVG
+- Constructive Solid Geometry engine
+  - Perhaps re-implement this:
+	- https://github.com/fogleman/ln?tab=readme-ov-file

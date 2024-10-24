@@ -68,7 +68,7 @@ class SerialPrinter():
 
         self.pen_maps = []
         self.gpgl_buffer = []
-        self.current_buffer_index = []
+        self.current_buffer_index = 0
         self.printing = False
 
     def add_to_print(

@@ -7,7 +7,7 @@ from plotter.config import ConfigManager
 from plotter.fonts.FontManager import FontManager
 from plotter.generators import (GeneratorManager, GeneratorParam,
                                 GeneratorParamGroup)
-from plotter.generators.Parameters import EnumParam, FloatParam, IntParam
+from plotter.generators.Parameters import EnumParam, FloatParam, IntParam, BoolParam
 from plotter.gui.Tags import Tags
 from plotter.printers.SerialPrinter import SerialPrinter
 from plotter.utils.scaling import scale_to_fit
@@ -433,6 +433,12 @@ class Gui:
                         elif isinstance(param, EnumParam):
                             dpg.add_combo(
                                 items=param.options,
+                                user_data=param,
+                                callback=self._update_parameter_callback,
+                                default_value=current_param_value,
+                            )
+                        elif isinstance(param, BoolParam):
+                            dpg.add_checkbox(
                                 user_data=param,
                                 callback=self._update_parameter_callback,
                                 default_value=current_param_value,
