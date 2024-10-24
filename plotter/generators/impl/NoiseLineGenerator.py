@@ -28,7 +28,7 @@ class NoiseLineGenerator(Generator):
 
     def __init__(self):
         """Initialize the generator."""
-        self.name = "noisy lines"
+        self.name = "WaveLines"
         super().__init__(self.name)
 
     def get_default_params(self) -> GeneratorParamGroup:
