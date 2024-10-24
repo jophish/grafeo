@@ -1,5 +1,5 @@
 from plotter.models import Model
-from plotter.gpgl import GpglGenerator
+from plotter.gpgl.GpglGenerator import GpglGenerator
 from plotter.config.ConfigManager import PenConfig
 from plotter.pens import Pen
 import serial
