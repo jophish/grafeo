@@ -119,3 +119,13 @@ How to hatch a PolygonCollection model:
  - At this point, areas where holes are may be hatched.
  - Create a new PolygonCollection containing all the lines NOT to be hatched, call it "NotHatched"
  - Get the symmetric difference of PartialHatched and NotHatched
+
+
+IDEA:
+
+"Overprinting" mode - printing multiple things on top of eachother.
+After the first "print", the model you printed is added to some "printed" array, and will always be rendered on the screen no matter what.
+Subsequent generations are overlaid on top of the previously printed stuff, so you can see what it will look like if you print them all on top of eachother.
+Whenever you print, only the currently generated model is printed, not the already printed stuff.
+
+Can perhaps optimize this. e.g., don't need to actually print things before adding additional models to the queue.

@@ -15,6 +15,8 @@ class Tags(StrEnum):
     PRINT_TEXTURE = auto()
     PRINT_PREVIEW_IMAGE = auto()
     PRINT_PREVIEW_NODE_DRAW = auto()
+    PRINT_PREVIEW_TITLE_NODE_DRAW = auto()
+    PRINT_PREVIEW_SUBTITLE_NODE_DRAW = auto()
     PEN_CONFIG = auto()
     PRINT_BUTTON = auto()
     PEN_REPLACE_MODAL = auto()
