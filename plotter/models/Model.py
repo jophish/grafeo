@@ -97,9 +97,10 @@ class BaseModel(Bounded):
     @property
     def all_lines(self):
         """Gets all lines in this model, including those in submodels."""
-        lines = [line for line in self._lines]
+        lines = []
         for model in self._models:
             lines += model.all_lines
+        lines += [line for line in self._lines]:
         return lines
 
     @property
@@ -120,13 +121,16 @@ class BaseModel(Bounded):
         """
         self._points.append(point)
 
-    def add_model(self, model: "BaseModel"):
+    def add_model(self, model: "BaseModel", prepend=False):
         """
         Add a sub-model to this model.
 
         :param model: Model to add
         """
-        self._models.append(model)
+        if prepend:
+            self._models.insert(0, model)
+        else:
+            self._models.append(model)
         self._update_bounding_box(model)
 
     def _update_bounding_box(self, atom: Bounded):
@@ -166,6 +170,7 @@ class BaseModel(Bounded):
         Normalize the model by translating it.
 
         Translates the model such that it is bound within the +x/+y quadrant.
+        TODO: This should probably be abstract.
         """
         translate_x = abs(min(0, self._bounding_box.min_x))
         translate_y = abs(min(0, self._bounding_box.min_y))
