@@ -132,7 +132,7 @@ class Explosion(Generator):
                 FloatParam("min_height", "min height", .5, .01, 200),
                 FloatParam("max_height", "min height", 3.0, .01, 200),
                 BoolParam("occlude", "whether or not objects should occlude", False),
-                FloatParam("step_size", "step size to sample for occlusion", 1, .001, 3),
+                FloatParam("step_size", "step size to sample for occlusion", 1.0, .001, 3),
             ],
         )
 

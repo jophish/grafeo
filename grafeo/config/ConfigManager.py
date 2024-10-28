@@ -4,13 +4,28 @@ from pathlib import Path
 from typing import Any
 from dataclasses import dataclass
 from ..pens import Pen
-
+import shutil
+from ..utils.deep_merge import deep_merge_dicts
 from ..generators import Generator, GeneratorParamGroup
+import copy
 
-CONFIG_FILENAME = "pyplot.json"
+CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILENAME = "grafeo_config.json"
+PENS_FILENAME = "grafeo_pens.json"
+CONFIG_DIR = os.path.join(Path.home(), ".config/grafeo/")
+
 CONFIG_PATH = os.path.join(
-    Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), CONFIG_FILENAME
+    CONFIG_DIR, CONFIG_FILENAME
 )
+PENS_PATH = os.path.join(
+    CONFIG_DIR, PENS_FILENAME
+)
+
+PRINTERS_FILENAME = "printers.json"
+PRINTERS_PATH = Path(CURRENT_PATH, PRINTERS_FILENAME)
+
+DEFAULT_PENS_FILENAME = 'default_pens.json'
+DEFAULT_PENS_PATH = Path(CURRENT_PATH, DEFAULT_PENS_FILENAME)
 
 @dataclass
 class PenConfig:
@@ -34,11 +49,28 @@ class ConfigManager:
     def __init__(self, generator_defaults: dict[str, GeneratorParamGroup]):
         """Initialize a config manager."""
         self.generator_defaults: dict[str, GeneratorParamGroup] = generator_defaults
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        self._init_pens()
+        self._load_printers()
         self._init_config()
+
+    def _load_printers(self):
+        with open(PRINTERS_PATH) as f:
+            self.printers = json.load(f)
+
+    def _init_pens(self):
+        if not Path.is_file(Path(PENS_PATH)):
+            shutil.copyfile(DEFAULT_PENS_PATH, PENS_PATH)
+        self._load_pens()
+
+    def _load_pens(self):
+        with open(PENS_PATH) as f:
+            self.pens = json.load(f)
 
     def _init_config(self):
         if not Path.is_file(Path(CONFIG_PATH)):
-            self._write_default_config()
+            self.config = self._get_default_config()
+            self.write_config_to_disk()
         else:
             self.load_config()
 
@@ -46,19 +78,18 @@ class ConfigManager:
         """
         Load config from disk into memory.
 
+        Merges default configs with current configuration
+
         If a generator does not exist on disk during loading, the config on disk will be
         updated with the defaults from the missing generator.
         """
+        existing_config = {}
         with open(CONFIG_PATH) as f:
-            self.config = json.load(f)
+            existing_config = json.load(f)
 
-        # If some generator is new and not yet in the config file, we should update the
-        # config on disk with the new defaults.
-        for generator_name in self.generator_defaults:
-            if generator_name not in self.config["generator_params"]:
-                self.config["generator_params"][
-                    generator_name
-                ] = self.generator_defaults[generator_name].get_dict_values()
+        default_config = self._get_default_config()
+
+        self.config = deep_merge_dicts(default_config, existing_config)
         self.write_config_to_disk()
 
     def write_config_to_disk(self):
@@ -106,7 +137,17 @@ class ConfigManager:
 
         :return: Current print settings
         """
-        return self.config["print_settings"]
+        if not self.get_current_printer():
+            return deep_merge_dicts(self.config['print_settings'], self.config['print_defaults'])
+        else:
+            printer_config = self.get_current_printer()
+            return deep_merge_dicts(self.config['print_settings'], {
+                "resolution_x": printer_config['resolution_x'],
+                "resolution_y": printer_config['resolution_y'],
+                "margin_x": printer_config['margin_x'],
+                "margin_y": printer_config['margin_y'],
+            })
+
 
     def get_title_settings(self) -> dict[str, Any]:
         """
@@ -116,13 +157,38 @@ class ConfigManager:
         """
         return self.config["title_settings"]
 
-    def get_serial_settings(self) -> dict[str, Any]:
+    def get_serial_settings(self) -> dict[str, Any] | None:
         """
         Return the current serial settings.
 
-        :return: Current serial settings
+        If no printer is currently selected that supports a serial connection,
+        returns None.
+
+        :return: Current serial settings, or None
         """
-        return self.config["serial"]
+        if self.config['current_printer']:
+            printer_config = self.get_current_printer()
+            if printer_config['connection'] == 'serial':
+                return printer_config['connection_defaults']
+
+        return None
+
+    def get_current_printer(self) -> dict[str, Any] | None:
+        """
+        Return the current printer config.
+
+        :return: Current printer config, or None if no printer set.
+        """
+        if self.config['current_printer']:
+            return filter(lambda x: x['name'] == self.printer, self['config']['printers'])[0]
+        return None
+
+    def set_current_printer(self, printer_name):
+        self.config['current_printer'] = printer_name
+        self.write_config_to_disk()
+
+    def get_all_printers(self) -> dict[str, Any]:
+        return {printer_config['name']: printer_config for printer_config in self['config']['printers']}
 
     def update_print_setting(self, name: str, value: Any):
         """
@@ -131,7 +197,16 @@ class ConfigManager:
         :param name: Name of parameter to update
         :param value: Value of parameter to update
         """
-        self.config["print_settings"][name] = value
+
+        # A user can only update the margins if a printer is selected.
+        if name == 'margin_x' or name == 'margin_y':
+            if self.current_printer:
+                current_printer = self.get_current_printer()
+                current_printer[name] = value
+            else:
+                self.config['print_defaults'][name] = value
+        else:
+            self.config['print_settings'][name] = value
         self.write_config_to_disk()
 
     def update_title_setting(self, title_type: str, name: str, value: Any):
@@ -200,139 +275,36 @@ class ConfigManager:
         self.config['generator_pen_map'][generator_name][pen] = index
         self.write_config_to_disk()
 
-    def _write_default_config(self):
+    def _get_default_printers(self):
+        printer_configs = []
+        for printer in self.printers:
+            default_config = copy.deepcopy(printer)
+            default_config["margin_x"] = default_config["default_margin_x"]
+            default_config["margin_y"] = default_config["default_margin_y"]
+            if default_config["connection"] == "serial":
+                default_config["connection_defaults"]["port"] = None
+            printer_configs.append(default_config)
+        return printer_configs
+
+    def _get_default_config(self):
         # Get default configs from each generator
         default_generator = list(self.generator_defaults.keys())[0]
         default_config = {
-            "generator_params": self._get_all_defaults(),
-            "generator_pen_map": {},
-            "serial": {
-                "port": "/dev/ttyUSB0",
-                "baud": 9600,
-                "bytesize": 8,
-                "parity": "even",
-                "stopbits": 2,
-                "flowcontrol": "xon/xoff",
-            },
-            "pens": [
-                {
-                    "descr": "Micron 005 Black",
-                    "weight": 1,
-                    "color": "#000000ff",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "default": True,
-                },
-                {
-                    "descr": "Prismacolor PM-31 (Dark Green)",
-                    "weight": 5,
-                    "color": "#40b43780",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-4 (Crimson Red)",
-                    "weight": 5,
-                    "color": "#e1020780",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-19 (Canary Yellow)",
-                    "weight": 5,
-                    "color": "#f7f70380",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-15 (Yellow Orange)",
-                    "weight": 5,
-                    "color": "#fca80380",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-61 (Dark Umber)",
-                    "weight": 5,
-                    "color": "#39171680",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-8 (Pink)",
-                    "weight": 5,
-                    "color": "#ff70ff80",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-50 (Violet)",
-                    "weight": 5,
-                    "color": "#260ffc80",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-44 (Ultramarine)",
-                    "weight": 5,
-                    "color": "#3370fa80",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-32 (Parrot Green)",
-                    "weight": 5,
-                    "color": "#3fd78180",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-98 (Black)",
-                    "weight": 5,
-                    "color": "#06080880",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-6 (Carmine Red)",
-                    "weight": 5,
-                    "color": "#ff578c80",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Prismacolor PM-53 (Mulberry)",
-                    "weight": 5,
-                    "color": "#c40dff80",
-                    "location": 3,
-                    "pause_to_replace": True,
-                    "load_directly": True
-                },
-                {
-                    "descr": "Micron 005 Red",
-                    "weight": 1,
-                    "color": "#eb4034ff",
-                    "location": 3,
-                    "pause_to_replace": True,
-                }
-            ],
-            "current_generator": default_generator,
-            "print_settings": {
+            # These defaults are required to render stuff to the screen
+            # in the case where the user has not selected a printer.
+            "print_defaults": {
                 "margin_x": 500,
                 "margin_y": 500,
-                "max_x_coord": 16640,
-                "max_y_coord": 10720,
+                "resolution_x": 16640,
+                "resolution_y": 10720
+            },
+            "generator_params": self._get_all_defaults(),
+            "generator_pen_map": {},
+            "current_printer": None,
+            "printers": self._get_default_printers(),
+            "pens": self.pens,
+            "current_generator": default_generator,
+            "print_settings": {
                 "scale": 1,
                 "rotation": 0,
                 "translate_x": 0,
@@ -367,5 +339,4 @@ class ConfigManager:
                 }
             }
         }
-        self.config = default_config
-        self.write_config_to_disk()
+        return default_config

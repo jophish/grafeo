@@ -10,10 +10,11 @@ from ..generators import (GeneratorManager, GeneratorParam,
 from ..generators.Parameters import EnumParam, FloatParam, IntParam, BoolParam
 from ..gui.Tags import Tags
 from ..gui.Modes import Modes
-from ..printers.SerialPrinter import SerialPrinter
 from ..utils.scaling import scale_to_fit
 from ..utils.debounce import debounce
 from ..svg.SvgManager import SvgManager
+from ..serializers import get_serializer
+from ..printers import get_printer
 
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
@@ -48,7 +49,8 @@ class Gui:
         self.generator_manager.set_current_generator(
             self.config_manager.get_current_generator()
         )
-        self.printer = SerialPrinter(self.config_manager.get_serial_settings())
+
+        self.printer = self._get_printer()
 
         self.font_manager = FontManager()
 
@@ -61,6 +63,24 @@ class Gui:
         self.program_mode = Modes.GENERATOR
         self.svg_manager = SvgManager()
 
+
+    # Attempts to get the printer from current config
+    def _get_printer(self):
+        current_printer = self.config_manager.get_current_printer()
+        if current_printer:
+            serializer = get_serializer(current_printer)
+            return get_printer(current_printer, serializer)
+        return None
+
+    def _get_serializer(self):
+        current_printer = self.config_manager.get_current_printer()
+        if current_printer:
+            try:
+                return get_serializer(current_printer)
+            except Exception as e:
+                print(e)
+                return None
+        return None
 
     def _render_titles(self):
         title_settings = self.config_manager.get_title_settings()
@@ -91,8 +111,8 @@ class Gui:
             return
 
         print_settings = self.config_manager.get_print_settings()
-        canvas_width = print_settings["max_x_coord"]
-        canvas_height = print_settings["max_y_coord"]
+        canvas_width = print_settings["resolution_x"]
+        canvas_height = print_settings["resolution_y"]
         window_width, window_height = dpg.get_item_rect_size(Tags.WINDOW)
         max_render_width = window_width - LEFT_PANEL_WIDTH - 50
         max_render_height = window_height - 50
@@ -266,8 +286,8 @@ class Gui:
 
         print_settings = self.config_manager.get_print_settings()
 
-        canvas_width = print_settings["max_x_coord"]
-        canvas_height = print_settings["max_y_coord"]
+        canvas_width = print_settings["resolution_x"]
+        canvas_height = print_settings["resolution_y"]
         window_width, window_height = dpg.get_item_rect_size(Tags.WINDOW)
         max_render_width = window_width - LEFT_PANEL_WIDTH - 50
         max_render_height = window_height - 50
@@ -325,10 +345,10 @@ class Gui:
 
         # Then, translate into place, taking into account additional translations
         scaled_translation_x = (
-            translate_x / print_settings["max_x_coord"] * draw_width
+            translate_x / print_settings["resolution_x"] * draw_width
         )
         scaled_translation_y = (
-            translate_y / print_settings["max_y_coord"] * draw_height
+            translate_y / print_settings["resolution_y"] * draw_height
         )
         translate_matrix = dpg.create_translation_matrix(
             (
@@ -348,6 +368,9 @@ class Gui:
 
     @_wrap_callback
     def _print_callback(self, app_data, user_data):
+        if not self.printer or not self.printer.has_serializer():
+            pass
+
         model = self.generator_manager.current_generator.model
         title_settings = self.config_manager.get_title_settings()
         print_settings = self.config_manager.get_print_settings()
@@ -666,16 +689,16 @@ class Gui:
                     dpg.add_slider_float(
                         user_data="translate_x",
                         callback=self._update_print_layout_callback,
-                        min_value=-print_settings["max_x_coord"] / 2,
-                        max_value=print_settings["max_x_coord"] / 2,
+                        min_value=-print_settings["resolution_x"] / 2,
+                        max_value=print_settings["resolution_x"] / 2,
                         default_value=default_print_settings["translate_x"],
                     )
                     dpg.add_text(default_value="translate_y", color=(204, 36, 29))
                     dpg.add_slider_float(
                         user_data="translate_y",
                         callback=self._update_print_layout_callback,
-                        min_value=-print_settings["max_y_coord"] / 2,
-                        max_value=print_settings["max_y_coord"] / 2,
+                        min_value=-print_settings["resolution_y"] / 2,
+                        max_value=print_settings["resolution_y"] / 2,
                         default_value=default_print_settings["translate_y"],
                     )
             if self.program_mode == Modes.SVG:
@@ -824,16 +847,16 @@ class Gui:
                 dpg.add_slider_float(
                     user_data=(text_item, "translate_x", False),
                     callback=self._update_title_callback,
-                    min_value=-print_settings["max_x_coord"] / 2,
-                    max_value=print_settings["max_x_coord"] / 2,
+                    min_value=-print_settings["resolution_x"] / 2,
+                    max_value=print_settings["resolution_x"] / 2,
                     default_value=title_settings[text_item]['translate_x'],
                 )
                 dpg.add_text(default_value="translate_y", color=(204, 36, 29))
                 dpg.add_slider_float(
                     user_data=(text_item, "translate_y", False),
                     callback=self._update_title_callback,
-                    min_value=-print_settings["max_y_coord"] / 2,
-                    max_value=print_settings["max_y_coord"] / 2,
+                    min_value=-print_settings["resolution_y"] / 2,
+                    max_value=print_settings["resolution_y"] / 2,
                     default_value=title_settings[text_item]['translate_y'],
                 )
 
@@ -976,7 +999,7 @@ class Gui:
         # Update render once on start to show empty canvas
         self.should_render = True
         while dpg.is_dearpygui_running():
-            if self.printer.printing_needs_user_input and not self.modal_visible:
+            if self.printer and self.printer.printing_needs_user_input and not self.modal_visible:
                 self._update_pen_replace_modal()
 
             dpg.render_dearpygui_frame()
