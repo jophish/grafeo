@@ -100,7 +100,7 @@ class BaseModel(Bounded):
         lines = []
         for model in self._models:
             lines += model.all_lines
-        lines += [line for line in self._lines]:
+        lines += [line for line in self._lines]
         return lines
 
     @property
