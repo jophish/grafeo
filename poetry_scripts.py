@@ -33,11 +33,11 @@ def test() -> None:
         "Please fix the failing test.",
     )
 
-def plotter() -> None:
+def grafeo() -> None:
     execute(
-        "plotter",
-        ["python3", "-m", "plotter.main"],
-        "Error while running plotter"
+        "grafeo",
+        ["python3", "-m", "grafeo.main"],
+        "Error running grafeo"
     )
 def format_check() -> None:
     execute(
