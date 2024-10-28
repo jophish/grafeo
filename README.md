@@ -1,5 +1,7 @@
 # grafeo
 
+**N.B. this is a work in progress!!**
+
 **grafeo** is an opinionated, Python-based GUI framework for creating generative & procedural art intended for printing on standard pen plotters.
 
 Grafeo provides a convenient framework for quickly iterating on procedural art generation, allowing users to define parameterized *generators* which output *models* of 2D scenes in response to the selected parameter values. Grafeo renders these 2D scenes, and allows the user to quickly adjust the selected generator's parameter values and re-render the scene. When a desired composition is found, the scene can easily be printed on a connected plotter.
