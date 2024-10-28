@@ -47,7 +47,7 @@ SVG mode is grafeo's second mode of operation, with support for importing and pr
 
 *A multi-frame SVG imported into grafeo's SVG mode, with multiple frames & registration marks per plotted page.*
 
-After entering SVG mode, you can load `./assets/cloth-animation.svg`, contains a stylized SVG rendering of a cloth falling over a spinning sphere, animated in Blender. In order to print multiple frames per page, you can adjust the number of rows/columns in the side bar, as well as change the size of the registration marks. Pressing the *print* button under the i/o section will print the currently selected page.
+After entering SVG mode, you can load `./assets/cloth-animation.svg`, which contains a stylized SVG rendering of a cloth falling over a spinning sphere, animated in Blender. In order to print multiple frames per page, you can adjust the number of rows/columns in the side bar, as well as change the size of the registration marks. Pressing the *print* button under the i/o section will print the currently selected page.
 
 Video reconstruction is currently an ad-hoc process, using one-off OpenCV-based scripts to perform computer vision tasks to align registration marks in the scanned frames. In the future, more information will be embedded into the registragion marks/frame margins, such that video reconstruction can be fully automated.
 
