@@ -6,7 +6,7 @@
 
 Grafeo provides a convenient framework for quickly iterating on procedural art generation, allowing users to define parameterized *generators* which output *models* of 2D scenes in response to the selected parameter values. Grafeo renders these 2D scenes, and allows the user to quickly adjust the selected generator's parameter values and re-render the scene. When a desired composition is found, the scene can easily be printed on a connected plotter.
 
-![grafeo user interface](https://i.imgur.com/6oz4MtG.jpeg)
+![grafeo user interface](https://github.com/jophish/grafeo/blob/main/assets/grafeo.png?raw=true)
 
 ## Features
 
@@ -38,12 +38,12 @@ Grafeo has first-class support for overlaying title and subtitle on each work, t
 
 SVG mode is grafeo's second mode of operation, with support for importing and printing SVG files (currently only multi-frame). Since many tools for printing SVG files already exist (most obviously, Inkscape), the primary purpose of this mode is for rendering multi-frame SVGs into animation frames with registration marks for ease of printing.
 
-![3D animation printed using a pen plotter](https://i.imgur.com/p2V15QB.gif)
+![3D animation printed using a pen plotter](https://github.com/jophish/grafeo/blob/main/assets/out.gif?raw=true)
 
 *A 24 fps, 247-frame animation plotted using grafeo, scanned, and digitally registered & reconstructed.*
 
 
-![grafeo's SVG mode](https://i.imgur.com/rFNCnAS.png)
+![grafeo's SVG mode](https://github.com/jophish/grafeo/blob/main/assets/svg-mode.png?raw=true)
 
 *A multi-frame SVG imported into grafeo's SVG mode, with multiple frames & registration marks per plotted page.*
 
