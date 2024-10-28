@@ -20,3 +20,9 @@ class Tags(StrEnum):
     PEN_CONFIG = auto()
     PRINT_BUTTON = auto()
     PEN_REPLACE_MODAL = auto()
+    MODE_OPTIONS_PANEL = auto()
+    MIDDLE_PANEL = auto()
+    SELECT_SVG_FILE_DIALOG = auto()
+    SVG_PAGE_NUM_SELECT = auto()
+    SVG_PRINT_OPTIONS = auto()
+

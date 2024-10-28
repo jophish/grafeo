@@ -9,9 +9,11 @@ from plotter.generators import (GeneratorManager, GeneratorParam,
                                 GeneratorParamGroup)
 from plotter.generators.Parameters import EnumParam, FloatParam, IntParam, BoolParam
 from plotter.gui.Tags import Tags
+from plotter.gui.Modes import Modes
 from plotter.printers.SerialPrinter import SerialPrinter
 from plotter.utils.scaling import scale_to_fit
 from plotter.utils.debounce import debounce
+from plotter.svg.SvgManager import SvgManager
 
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
@@ -56,6 +58,10 @@ class Gui:
         self._render_titles()
         self.modal_visible = False
 
+        self.program_mode = Modes.GENERATOR
+        self.svg_manager = SvgManager()
+
+
     def _render_titles(self):
         title_settings = self.config_manager.get_title_settings()
 
@@ -74,7 +80,16 @@ class Gui:
         self.title_model = models[0]
         self.subtitle_model = models[1]
 
+    @debounce(.5)
+    def _render_print_preview_debounced(self):
+        # This exists because we don't always want to debounce
+        # generating the print preview, e.g., on startup.
+        self._render_print_preview()
+
     def _render_print_preview(self):
+        if not dpg.does_item_exist(Tags.PRINT_PREVIEW):
+            return
+
         print_settings = self.config_manager.get_print_settings()
         canvas_width = print_settings["max_x_coord"]
         canvas_height = print_settings["max_y_coord"]
@@ -137,7 +152,11 @@ class Gui:
                     color=(150, 0, 0),
                 )
             with dpg.draw_layer():
-                model = self.generator_manager.current_generator.model
+                model = None
+                if self.program_mode == Modes.GENERATOR:
+                    model = self.generator_manager.current_generator.model
+                elif self.program_mode == Modes.SVG:
+                    model = self.svg_manager.get_model_for_current_page()
                 pen_map = self.config_manager.get_pen_map(
                     self.config_manager.get_current_generator(), model.get_used_pens()
                 )
@@ -151,7 +170,8 @@ class Gui:
                             thickness=pen_config["weight"],
                         )
 
-                self._draw_title_and_subtitle()
+                if self.program_mode == Modes.GENERATOR:
+                    self._draw_title_and_subtitle()
 
             self._apply_all_print_preview_transforms()
 
@@ -188,35 +208,45 @@ class Gui:
         print_settings = self.config_manager.get_print_settings()
         title_settings = self.config_manager.get_title_settings()
 
-        # Transform the actual generator model into place
-        self._apply_print_preview_transforms(
-            Tags.PRINT_PREVIEW_NODE_DRAW,
-            self.generator_manager.current_generator.model,
-            print_settings['translate_x'],
-            print_settings['translate_y'],
-            print_settings['scale'],
-            print_settings['rotation'],
-        )
+        if self.program_mode == Modes.SVG:
+            self._apply_print_preview_transforms(
+                Tags.PRINT_PREVIEW_NODE_DRAW,
+                self.svg_manager.get_model_for_current_page(),
+                print_settings['translate_x'],
+                print_settings['translate_y'],
+                print_settings['scale'],
+                print_settings['rotation'],
+            )
+        if self.program_mode == Modes.GENERATOR:
+            # Transform the actual generator model into place
+            self._apply_print_preview_transforms(
+                Tags.PRINT_PREVIEW_NODE_DRAW,
+                self.generator_manager.current_generator.model,
+                print_settings['translate_x'],
+                print_settings['translate_y'],
+                print_settings['scale'],
+                print_settings['rotation'],
+            )
 
-        # Transform title model into place
-        self._apply_print_preview_transforms(
-            Tags.PRINT_PREVIEW_TITLE_NODE_DRAW,
-            self.title_model,
-            title_settings['title']['translate_x'],
-            title_settings['title']['translate_y'],
-            title_settings['title']['scale'],
-            title_settings['title']['rotation'],
-        )
+            # Transform title model into place
+            self._apply_print_preview_transforms(
+                Tags.PRINT_PREVIEW_TITLE_NODE_DRAW,
+                self.title_model,
+                title_settings['title']['translate_x'],
+                title_settings['title']['translate_y'],
+                title_settings['title']['scale'],
+                title_settings['title']['rotation'],
+            )
 
-        # Transform subtitle model into place
-        self._apply_print_preview_transforms(
-            Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW,
-            self.subtitle_model,
-            title_settings['subtitle']['translate_x'],
-            title_settings['subtitle']['translate_y'],
-            title_settings['subtitle']['scale'],
-            title_settings['subtitle']['rotation'],
-        )
+            # Transform subtitle model into place
+            self._apply_print_preview_transforms(
+                Tags.PRINT_PREVIEW_SUBTITLE_NODE_DRAW,
+                self.subtitle_model,
+                title_settings['subtitle']['translate_x'],
+                title_settings['subtitle']['translate_y'],
+                title_settings['subtitle']['scale'],
+                title_settings['subtitle']['rotation'],
+            )
 
     def _apply_print_preview_transforms(
             self,
@@ -321,51 +351,71 @@ class Gui:
         model = self.generator_manager.current_generator.model
         title_settings = self.config_manager.get_title_settings()
         print_settings = self.config_manager.get_print_settings()
-        self.printer.add_to_print(
-            model,
-            self.config_manager.get_pen_map(
-                self.config_manager.get_current_generator(), model.get_used_pens()
-            ),
-            print_settings,
-            print_settings['translate_x'],
-            print_settings['translate_y'],
-            print_settings['scale'],
-            print_settings['rotation'],
-        )
 
-        if title_settings['title']['show']:
-            pen_num = str(list(self.title_model.get_used_pens())[0].value)
+        if self.program_mode == Modes.SVG:
+            svg_model = self.svg_manager.get_model_for_current_page()
+            pen_num = str(list(svg_model.get_used_pens())[0].value)
             pen_index = self.config_manager.get_pen_index_by_desc(title_settings['title']['pen'])
             pen_config = self.config_manager.get_available_pen_configs()[pen_index]
             pen_map = {
                 pen_num: pen_config
             }
             self.printer.add_to_print(
-                self.title_model,
+                svg_model,
                 pen_map,
                 print_settings,
-                title_settings['title']['translate_x'],
-                title_settings['title']['translate_y'],
-                title_settings['title']['scale'],
-                title_settings['title']['rotation'],
+                print_settings['translate_x'],
+                print_settings['translate_y'],
+                print_settings['scale'],
+                print_settings['rotation'],
             )
 
-        if title_settings['subtitle']['show']:
-            pen_num = str(list(self.subtitle_model.get_used_pens())[0].value)
-            pen_index = self.config_manager.get_pen_index_by_desc(title_settings['subtitle']['pen'])
-            pen_config = self.config_manager.get_available_pen_configs()[pen_index]
-            pen_map = {
-                pen_num: pen_config
-            }
+        if self.program_mode == Modes.GENERATOR:
             self.printer.add_to_print(
-                self.subtitle_model,
-                pen_map,
+                model,
+                self.config_manager.get_pen_map(
+                    self.config_manager.get_current_generator(), model.get_used_pens()
+                ),
                 print_settings,
-                title_settings['subtitle']['translate_x'],
-                title_settings['subtitle']['translate_y'],
-                title_settings['subtitle']['scale'],
-                title_settings['subtitle']['rotation'],
+                print_settings['translate_x'],
+                print_settings['translate_y'],
+                print_settings['scale'],
+                print_settings['rotation'],
             )
+
+            if title_settings['title']['show']:
+                pen_num = str(list(self.title_model.get_used_pens())[0].value)
+                pen_index = self.config_manager.get_pen_index_by_desc(title_settings['title']['pen'])
+                pen_config = self.config_manager.get_available_pen_configs()[pen_index]
+                pen_map = {
+                    pen_num: pen_config
+                }
+                self.printer.add_to_print(
+                    self.title_model,
+                    pen_map,
+                    print_settings,
+                    title_settings['title']['translate_x'],
+                    title_settings['title']['translate_y'],
+                    title_settings['title']['scale'],
+                    title_settings['title']['rotation'],
+                )
+
+            if title_settings['subtitle']['show']:
+                pen_num = str(list(self.subtitle_model.get_used_pens())[0].value)
+                pen_index = self.config_manager.get_pen_index_by_desc(title_settings['subtitle']['pen'])
+                pen_config = self.config_manager.get_available_pen_configs()[pen_index]
+                pen_map = {
+                    pen_num: pen_config
+                }
+                self.printer.add_to_print(
+                    self.subtitle_model,
+                    pen_map,
+                    print_settings,
+                    title_settings['subtitle']['translate_x'],
+                    title_settings['subtitle']['translate_y'],
+                    title_settings['subtitle']['scale'],
+                    title_settings['subtitle']['rotation'],
+                )
 
         self.printer.begin_print()
         pass
@@ -549,6 +599,35 @@ class Gui:
 
         dpg.configure_item(Tags.PEN_REPLACE_MODAL, show=True)
 
+    def _update_svg_page_num_select(self):
+        if dpg.does_item_exist(Tags.SVG_PAGE_NUM_SELECT):
+            dpg.delete_item(Tags.SVG_PAGE_NUM_SELECT)
+            dpg.add_combo(
+                parent=Tags.SVG_PRINT_OPTIONS,
+                tag=Tags.SVG_PAGE_NUM_SELECT,
+                user_data="page_num",
+                items=list(range(1, self.svg_manager.get_num_pages()+1)),
+                callback=self._update_svg_layout_callback,
+                default_value=(self.svg_manager.current_page + 1)
+            )
+
+    @_wrap_callback
+    def _update_svg_layout_callback(self, app_data, user_data):
+        if user_data == 'num_cols':
+            self.svg_manager.update_num_cols(app_data)
+            self._update_svg_page_num_select()
+        if user_data == 'num_rows':
+            self.svg_manager.update_num_rows(app_data)
+            self._update_svg_page_num_select()
+        if user_data == 'show_registration_marks':
+            self.svg_manager.show_registration_marks(app_data)
+        if user_data == 'registration_mark_size':
+            self.svg_manager.set_registration_mark_size(app_data)
+        if user_data == 'page_num':
+            self.svg_manager.set_current_page(int(app_data) - 1)
+
+        self._render_print_preview_debounced()
+
     def _make_print_settings_section(self):
         # Options relating to print layout
         default_print_settings = self.config_manager.get_print_settings()
@@ -599,6 +678,47 @@ class Gui:
                         max_value=print_settings["max_y_coord"] / 2,
                         default_value=default_print_settings["translate_y"],
                     )
+            if self.program_mode == Modes.SVG:
+                with dpg.table_row():
+                    with dpg.table_cell(tag=Tags.SVG_PRINT_OPTIONS):
+                        dpg.add_text(default_value="num rows", color=(204, 36, 29))
+                        dpg.add_slider_int(
+                            user_data="num_rows",
+                            callback=self._update_svg_layout_callback,
+                            min_value=1,
+                            max_value=50,
+                            default_value=1
+                        )
+                        dpg.add_text(default_value="num cols", color=(204, 36, 29))
+                        dpg.add_slider_int(
+                            user_data="num_cols",
+                            callback=self._update_svg_layout_callback,
+                            min_value=1,
+                            max_value=50,
+                            default_value=1
+                        )
+                        dpg.add_text(default_value=f'show registration marks', color=(204, 36, 29))
+                        dpg.add_checkbox(
+                            user_data='show_registration_marks',
+                            callback=self._update_svg_layout_callback,
+                            default_value=False,
+                        )
+                        dpg.add_text(default_value=f'registration mark size', color=(204, 36, 29))
+                        dpg.add_slider_float(
+                            user_data="registration_mark_size",
+                            callback=self._update_svg_layout_callback,
+                            min_value=1,
+                            max_value=500,
+                            default_value=10
+                        )
+                        dpg.add_text(default_value=f'page number', color=(204, 36, 29))
+                        dpg.add_combo(
+                            tag=Tags.SVG_PAGE_NUM_SELECT,
+                            user_data="page_num",
+                            items=list(range(1, self.svg_manager.get_num_pages()+1)),
+                            callback=self._update_svg_layout_callback,
+                            default_value=(self.svg_manager.current_page + 1)
+                        )
 
     @debounce(.5)
     def _rerender_title(self):
@@ -730,6 +850,76 @@ class Gui:
                     for text_item in ["title", "subtitle"]:
                         make_section(text_item)
 
+    @_wrap_callback
+    def _select_program_mode_callback(self, program_mode, user_data):
+        self.program_mode = program_mode
+        self._render_program_mode_sections()
+
+    @_wrap_callback
+    def _select_svg_file_callback(self, file_path, user_data):
+        self.svg_manager.load_svg(file_path['file_path_name'])
+        self._render_print_preview()
+
+    def _render_program_mode_sections(self):
+        # First, delete children of base nodes
+        if dpg.does_item_exist(Tags.MODE_OPTIONS_PANEL):
+            dpg.delete_item(Tags.MODE_OPTIONS_PANEL, children_only=True)
+        if dpg.does_item_exist(Tags.MIDDLE_PANEL):
+            dpg.delete_item(Tags.MIDDLE_PANEL, children_only=True)
+
+        if self.program_mode == Modes.GENERATOR:
+            self._render_generator_mode()
+        elif self.program_mode == Modes.SVG:
+            self._render_svg_mode()
+
+    def _render_svg_mode(self):
+        with dpg.group(parent =Tags.MODE_OPTIONS_PANEL):
+            dpg.add_button(label="select svg file", callback=lambda: dpg.show_item(Tags.SELECT_SVG_FILE_DIALOG))
+            with dpg.collapsing_header(label="print layout", parent=Tags.MODE_OPTIONS_PANEL):
+                self._make_print_settings_section()
+        with dpg.collapsing_header(label="i/o", parent=Tags.MODE_OPTIONS_PANEL):
+            # Set Serial port options
+            dpg.add_button(
+                label="print",
+                callback=self._print_callback,
+                tag=Tags.PRINT_BUTTON,
+            )
+        with dpg.tab_bar(parent = Tags.MIDDLE_PANEL):
+            with dpg.tab(label="print preview", tag=Tags.PRINT_PREVIEW):
+                pass
+
+        self._render_print_preview()
+
+    def _render_generator_mode(self):
+        with dpg.collapsing_header(label="generators", parent=Tags.MODE_OPTIONS_PANEL):
+            # List all available generators, allow a user to pick one
+            dpg.add_radio_button(
+                label="generator",
+                items=self.generator_manager.get_generator_names(),
+                default_value=self.generator_manager.current_generator.name,
+                callback=self._select_generator_callback,
+            )
+        with dpg.collapsing_header(label="parameters", tag=Tags.PARAMETERS, parent=Tags.MODE_OPTIONS_PANEL):
+            # Allow user to choose parameters and generate
+            self._make_parameter_items()
+        with dpg.collapsing_header(label="i/o", parent=Tags.MODE_OPTIONS_PANEL):
+            # Set Serial port options
+            dpg.add_button(
+                label="print",
+                callback=self._print_callback,
+                tag=Tags.PRINT_BUTTON,
+            )
+        with dpg.collapsing_header(label="print layout", parent=Tags.MODE_OPTIONS_PANEL):
+            self._make_print_settings_section()
+        with dpg.collapsing_header(label="title & subtitle", parent=Tags.MODE_OPTIONS_PANEL):
+            self._make_title_settings_section()
+        with dpg.collapsing_header(label="pens", tag=Tags.PEN_CONFIG, parent=Tags.MODE_OPTIONS_PANEL):
+            self._make_pen_config_section()
+
+        with dpg.tab_bar(parent = Tags.MIDDLE_PANEL):
+            with dpg.tab(label="print preview", tag=Tags.PRINT_PREVIEW):
+                pass
+        self._render_print_preview()
 
     def start(self):
         """Start the GUI."""
@@ -738,6 +928,14 @@ class Gui:
         dpg.setup_dearpygui()
         dpg.set_global_font_scale(1)
         with dpg.window(tag=Tags.WINDOW):
+            with dpg.file_dialog(
+                show=False,
+                callback=self._select_svg_file_callback,
+                    width=700,
+                    height=400,
+                tag=Tags.SELECT_SVG_FILE_DIALOG
+            ):
+                dpg.add_file_extension(".svg")
             # Pop-up to confirm pen replacement
             with dpg.window(
                 label="Replace Pen",
@@ -750,45 +948,18 @@ class Gui:
             with dpg.group(horizontal=True):
                 # Left pane
                 with dpg.child_window(width=LEFT_PANEL_WIDTH, autosize_y=True):
-                    with dpg.collapsing_header(label="generators"):
-                        # List all available generators, allow a user to pick one
-                        dpg.add_radio_button(
-                            label="generator",
-                            items=self.generator_manager.get_generator_names(),
-                            default_value=self.generator_manager.current_generator.name,
-                            callback=self._select_generator_callback,
-                        )
-                    with dpg.collapsing_header(label="parameters", tag=Tags.PARAMETERS):
-                        # Allow user to choose parameters and generate
-                        self._make_parameter_items()
-                    with dpg.collapsing_header(label="i/o"):
-                        # Set Serial port options
-                        dpg.add_button(label="test")
-                        dpg.add_button(
-                            label="print",
-                            callback=self._print_callback,
-                            tag=Tags.PRINT_BUTTON,
-                        )
-                    with dpg.collapsing_header(label="print layout"):
-                        self._make_print_settings_section()
-                    with dpg.collapsing_header(label="title & subtitle"):
-                        self._make_title_settings_section()
-                    with dpg.collapsing_header(label="pens", tag=Tags.PEN_CONFIG):
-                        self._make_pen_config_section()
-                    with dpg.collapsing_header(label="files"):
-                        # Load/Save files/presets
-                        dpg.add_button(label="test")
-                    with dpg.group(horizontal=True):
-                        dpg.add_button(label="save")
-                        dpg.add_input_text(
-                            label="filaname", default_value="filename.plt"
-                        )
+                    dpg.add_radio_button(
+                        label="generator",
+                        items=[mode.value for mode in Modes],
+                        default_value=Modes.GENERATOR,
+                        callback=self._select_program_mode_callback
+                    )
+                    with dpg.group(tag=Tags.MODE_OPTIONS_PANEL):
+                        pass
 
                 # Middle Pane
-                with dpg.group(tag="middle"):
-                    with dpg.tab_bar():
-                        with dpg.tab(label="print preview", tag=Tags.PRINT_PREVIEW):
-                            pass
+                with dpg.group(tag=Tags.MIDDLE_PANEL):
+                    pass
 
                 # Right Pane
                 with dpg.group():
@@ -801,6 +972,7 @@ class Gui:
         dpg.set_primary_window(Tags.WINDOW, True)
         dpg.show_viewport()
 
+        self._render_program_mode_sections()
         # Update render once on start to show empty canvas
         self.should_render = True
         while dpg.is_dearpygui_running():

@@ -1,141 +1,76 @@
-docstring reference:
-https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
+# grafeo
 
-Ideas:
+**grafeo** is an opinionated, Python-based GUI framework for creating generative & procedural art intended for printing on standard pen plotters.
 
-MP4100 (and GPGL in general) supports a variety of builtins that result in higher quality prints than by only using primitive DRAW commands.
+Grafeo provides a convenient framework for quickly iterating on procedural art generation, allowing users to define parameterized *generators* which output *models* of 2D scenes in response to the selected parameter values. Grafeo renders these 2D scenes, and allows the user to quickly adjust the selected generator's parameter values and re-render the scene. When a desired composition is found, the scene can easily be printed on a connected plotter.
 
-In particular, these are:
+![grafeo user interface](https://i.imgur.com/6oz4MtG.jpeg)
 
-* DRAW
-* CIRCLE
-* CURVE
-* ELLIPSE
+## Features
 
-Of these, CURVE seems the most important to implement.
+* Extensible framework for creating parameterized art "generators"
+* Extensible printer & serialization support
+  * Support for compiling models to GPGL
+* Built-in hatching support for arbitrary polygons
+* First-class support for multiple pens
+* Built-in SVG font rendering
+  * First-class support for title/subtitling
+* SVG import/rendering
+* Support for printing multi-frame SVGs as animation frames
 
-More specifically, we want to generate precedural images for the plotter to print. These images will consist of straight lines, and curves. (Generally, just curves.)
-We should represent these generated images as SVGs for ease of displaying/modifying/etc. SVGs define curves as cubic bezier curves; the CURVE command of the plotter draws
-cubic splines. A conversion must happen somewhere along the line.
+## Structure
 
-In general, I think we want something like:
+Grafeo is split into two separate modes of operation, **generator mode**, for creating and printing procedurally generated scenes, and **svg mode**, for importing and printing SVGs, with animation support.
 
-* Pick generation parameters
-* Generate internal representation (in memory) of generated image
-  * eg, data member/class instance per line/curve, etc. etc.
-  * Able to serialize and save
-* Convert internal rep. into SVG for viewing
-  * Able to save
-* Convert internal rep. into list of GPGL commands
-  * Able to save
-* Be able to run program
+### Generator Mode
+The overall structure of grafeo is relatively simple. Users define `Generator` classes, which accept a number of `Parameter` objects of different types (enum, int, float, bool, etc.). Available generators are automatically added as options in the GUI. When a generator is selected in the
+GUI, its available parameters appear and are able to be edited by the user. At any time, you can re-render the model with the current parameters by selecting the **render** button.
 
+Generator classes contain a single method `_generate` which is called on each render. `_generate` is called with a single argument, a dictionary containing the current parameter values of the generator. This is the core method where scene generation occurs. The `_generate` method of each generator is expected to return a `Model` object representing the scene.
 
-Issues:
+At their core, `Model` objects are simply collections of primitive `Line` and `Point` objects, or recursively, other `Model` objects. In addition to requiring coordinate data, `Line` and `Point` objects require a `Pen` to be set. Inherently, no semantics are associated with each pen. At the rendering step, however, grafeo collects data about all pens used by the current model, and allows the user to set a mapping between distinct pens used in the model, and a globally defined collection of actual, physical pens, with distinct properties.
 
-* Handshaking (software XON/XOFF) doesn't work atm
-* Read commands don't seem to work
-* Exact alignment of plotter is still a mystery/registration with paper
+Grafeo has first-class support for overlaying title and subtitle on each work, through a built-in SVG font renderer. See below for instructions on adding support for a new font.
 
+### SVG Mode
 
+SVG mode is grafeo's second mode of operation, with support for importing and printing SVG files (currently only multi-frame). Since many tools for printing SVG files already exist (most obviously, Inkscape), the primary purpose of this mode is for rendering multi-frame SVGs into animation frames with registration marks for ease of printing.
 
-Pen config:
+![3D animation printed using a pen plotter](https://i.imgur.com/p2V15QB.gif)
 
-- If no model exists, do not render section
-- When a model is generated, if section is not rendered, render section.
-  - There may a stored pen mapping in the config for this model. If there is:
-	- For each pen in the stored mapping that's also used in the model, render it as an option with the saved default
-	- If a pen is missing from the config but appears in the model, render the section and use the default pen, and write
-		this new pen to the model's config
-  - If there is not a stored pen mapping in the config:
-	- Write config for each pen in the modeln, with the default pen selected
-- If the section is rendered, re-render with the same pen semantics as above.
+*A 24 fps, 247-frame animation plotted using grafeo, scanned, and digitally registered & reconstructed.*
 
 
-# Printin
+![grafeo's SVG mode](https://i.imgur.com/rFNCnAS.png)
 
-High level
+*A multi-frame SVG imported into grafeo's SVG mode, with multiple frames & registration marks per plotted page.*
 
-- For each pen used in the model, generate a chunk of GPGL
+After entering SVG mode, you can load `./assets/cloth-animation.svg`, contains a stylized SVG rendering of a cloth falling over a spinning sphere, animated in Blender. In order to print multiple frames per page, you can adjust the number of rows/columns in the side bar, as well as change the size of the registration marks. Pressing the *print* button under the i/o section will print the currently selected page.
 
+Video reconstruction is currently an ad-hoc process, using one-off OpenCV-based scripts to perform computer vision tasks to align registration marks in the scanned frames. In the future, more information will be embedded into the registragion marks/frame margins, such that video reconstruction can be fully automated.
 
-Total GPGL generation:
- Given:
-   - Model
-   - Scale
-   - Rotation
-   - Print parameters (max_x, max_y)f
- Return:
- A list of objects.
+## Adding Fonts
 
- Each object has two entires, "gpgl" and "precondition".
- "gpgl" is a list of GPGL commands (which are just strings).
- "precondition" is a human-readable string that represents some action the user must take before
- the GPGL in "gpgl" is executed. This will be displayed to the user in a modal and require them to acknowledge
- (handled higher up in the callstack)
+The process for adding a new font is relatively straightforward, however is mostly suited to my own workflows at the moment. If you have a suggestion to automate more of this process, open a PR!
 
-GPGL generation:
- Given:
-	- List of lines
-	- Scale
-	- Rotation
-	- Print parameters (max_x, max_y) of GPGL
+* Ensure `fontforge` is installed and available on your `PATH`.
+* First, find a .ttf (TrueType) font file for the font you'd like to add.
+* Run `./scripts/convert-font.pe <PATH_TO_.TTF_FILE>`
+  * This will convert your TrueType font into an SVG font file.
+* Open the generated SVG font file in `fontforge`.
+  * Select all glyphs (Ctrl-A), and then run `Element -> Overlap -> Remove Overlap`.
+  * Save the SVG font.
+  * This simplifies the glyph geometries, and guarantees geometry constraints such that we are always able to correctly determine holes in glyphs via graph algorithms for proper hatching.
+* Move the SVG font file into the `./plotter/fonts/svg/` directory. It will automatically be detected by grafeo and made available for use.
 
-- Generate transformation matrix "mat" from "model space" -> "GPGL space"
-- Pick up pen
-- For each line:
-  - get first point, move to mat*pt (Mxy)
-  - for each subsequent point Dxy
-- Set pen down
+At time of writing, there is no special support for kerning. The converted SVG fonts typically specify either a global or per-glyph `horiz-adv-x` attribute which seems to roughly serve as an x-offset to use between glyphs, which is what grafeo currently uses to determine spacing. This means that monospaced typefaces are currently best suited to use.
 
+## TODO
 
-
-
-# Fonts
-
-# Adding a Font
-First, get the TTF file of the font you want.
-Then, run the script in ./scripts to generate the SVG file.
-Open the SVG file in fontforge, select all glyphs, and run Element -> Overlap -> Remove Overlap.
-Save the SVG file.
-
-- Font Models are "PolygonCollection" models
-- PolygonCollection models consist of any number of "Polygon" models
-  - It is assumed that none of these polygons intersect eachother
-- A Polygon model is a model with a single Line with the same start and end points with no self-intersections.
-
-How to hatch a Polygon:
- - Get bounding box of polygon.
- - Create a model of hatch lines to cover bounding box.
- - Intersect the hatch line model and polygon model
-
-How to hatch a PolygonCollection model:
- - For each Polygon, determine whether it should be hatched or not.
-   - This is the hard part
- - Get the bounding box of the PolygonCollection.
- - Create a model of hatch lines to cover the bounding box.
- - Create a new PolygonCollection containing each of the Polygons to be hatched
- - Intersect this with the hatch line model. Call the result "PartialHatched"
- - At this point, areas where holes are may be hatched.
- - Create a new PolygonCollection containing all the lines NOT to be hatched, call it "NotHatched"
- - Get the symmetric difference of PartialHatched and NotHatched
-
-
-IDEA:
-
-"Overprinting" mode - printing multiple things on top of eachother.
-After the first "print", the model you printed is added to some "printed" array, and will always be rendered on the screen no matter what.
-Subsequent generations are overlaid on top of the previously printed stuff, so you can see what it will look like if you print them all on top of eachother.
-Whenever you print, only the currently generated model is printed, not the already printed stuff.
-
-Can perhaps optimize this. e.g., don't need to actually print things before adding additional models to the queue.
-
-
-TODO:
-
-- Load/Save files
-  - Each file contains serialized model, current generation params, print settings (rot/scale/translation), title settings
-- Export SVG
-- Constructive Solid Geometry engine
-  - Perhaps re-implement this:
-	- https://github.com/fogleman/ln?tab=readme-ov-file
+* Import/export model/parameters
+* Export as SVG
+* Better SVG importing/animation support
+  * Implement a proper, orientation-aware registration system for animation frames, with machine-readable metadata in frame margins for automatic reconstruction.
+  * Incorporate animation reconstruction directly into GUI.
+* Genericize printer/serialization interfaces
+* Make app actually usable while printing is happening
