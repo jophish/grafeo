@@ -180,7 +180,7 @@ class ConfigManager:
         :return: Current printer config, or None if no printer set.
         """
         if self.config['current_printer']:
-            return filter(lambda x: x['name'] == self.printer, self['config']['printers'])[0]
+            return list(filter(lambda x: x['name'] == self.config['current_printer'], self.config['printers']))[0]
         return None
 
     def set_current_printer(self, printer_name):
@@ -188,7 +188,13 @@ class ConfigManager:
         self.write_config_to_disk()
 
     def get_all_printers(self) -> dict[str, Any]:
-        return {printer_config['name']: printer_config for printer_config in self['config']['printers']}
+        return {printer_config['name']: printer_config for printer_config in self.config['printers']}
+
+    def update_current_printer_connection_setting(self, name: str, value: Any):
+        current_printer = self.get_current_printer()
+        if current_printer:
+            current_printer['connection_defaults'][name] = value
+            self.write_config_to_disk()
 
     def update_print_setting(self, name: str, value: Any):
         """
@@ -198,10 +204,9 @@ class ConfigManager:
         :param value: Value of parameter to update
         """
 
-        # A user can only update the margins if a printer is selected.
         if name == 'margin_x' or name == 'margin_y':
-            if self.current_printer:
-                current_printer = self.get_current_printer()
+            current_printer = self.get_current_printer()
+            if current_printer:
                 current_printer[name] = value
             else:
                 self.config['print_defaults'][name] = value
@@ -220,8 +225,8 @@ class ConfigManager:
         self.write_config_to_disk()
 
     def _get_default_pen_index(self) -> int:
-        for i in range(len(self.config['pens'])):
-            pen = self.config['pens'][i]
+        for i in range(len(self.pens)):
+            pen = self.pens[i]
             if 'default' in pen and pen['default']:
                 return i
 
@@ -237,7 +242,7 @@ class ConfigManager:
             pen_map = {pen: default_pen_index for pen in pens}
             self.config['generator_pen_map'][generator_name] = pen_map
             self.write_config_to_disk()
-            return {pen: self.config['pens'][i] for pen, i in pen_map.items()}
+            return {pen: self.pens[i] for pen, i in pen_map.items()}
         else:
             generator_pen_map = self.config['generator_pen_map'][generator_name]
             pen_map = {}
@@ -246,14 +251,18 @@ class ConfigManager:
                 if str(pen.value) not in generator_pen_map:
                     dirty = True
                     self.config['generator_pen_map'][generator_name][str(pen.value)] = default_pen_index
-                pen_map[str(pen.value)] = self.config['pens'][generator_pen_map[str(pen.value)]]
+
+                if generator_pen_map[str(pen.value)] >= len(self.pens):
+                    pen_map[str(pen.value)] = self.pens[default_pen_index]
+                else:
+                    pen_map[str(pen.value)] = self.pens[generator_pen_map[str(pen.value)]]
             if dirty:
                 self.write_config_to_disk()
             return pen_map
 
     def get_pen_index_by_desc(self, descr: str) -> int:
-        for i in range(len(self.config['pens'])):
-            if self.config['pens'][i]['descr'] == descr:
+        for i in range(len(self.pens)):
+            if self.pens[i]['descr'] == descr:
                 return i
 
     def get_available_pen_configs(self) -> list[dict[str, Any]]:
@@ -262,7 +271,7 @@ class ConfigManager:
 
         :return: List of pen configs.
         """
-        return self.config['pens']
+        return self.pens
 
     def update_pen_map(self, generator_name: str, pen: Pen, index: int):
         """
@@ -302,7 +311,6 @@ class ConfigManager:
             "generator_pen_map": {},
             "current_printer": None,
             "printers": self._get_default_printers(),
-            "pens": self.pens,
             "current_generator": default_generator,
             "print_settings": {
                 "scale": 1,

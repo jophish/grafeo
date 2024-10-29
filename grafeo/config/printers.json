@@ -1,0 +1,18 @@
+[
+{
+  "name": "Graphtec MP4100",
+  "resolution_x": 16640,
+  "resolution_y": 10720,
+  "default_margin_x": 500,
+  "default_margin_y": 500,
+  "connection": "serial",
+  "serializer": "gpgl",
+  "connection_defaults": {
+    "baud": 9600,
+    "bytesize": 8,
+    "parity": "even",
+    "stopbits": "2",
+    "flowcontrol": "xon/xoff"
+  }
+}
+]

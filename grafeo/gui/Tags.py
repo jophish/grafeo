@@ -25,4 +25,7 @@ class Tags(StrEnum):
     SELECT_SVG_FILE_DIALOG = auto()
     SVG_PAGE_NUM_SELECT = auto()
     SVG_PRINT_OPTIONS = auto()
+    PRINT_OPTIONS_BUTTON = auto()
+    PRINT_OPTIONS_MODAL = auto()
+    MARGIN_SECTION = auto()
 

@@ -15,6 +15,7 @@ from ..utils.debounce import debounce
 from ..svg.SvgManager import SvgManager
 from ..serializers import get_serializer
 from ..printers import get_printer
+from ..serializers.SerialSerializer import SerialSerializer
 
 LEFT_PANEL_WIDTH = 400
 LEFT_PANEL_MARGIN = 30
@@ -58,7 +59,9 @@ class Gui:
         self.subtitle_model = None
 
         self._render_titles()
-        self.modal_visible = False
+
+        self.pen_replace_modal_visible = False
+        self.print_options_modal_visible = False
 
         self.program_mode = Modes.GENERATOR
         self.svg_manager = SvgManager()
@@ -470,10 +473,19 @@ class Gui:
             self.generator_manager.current_generator
         )
 
+    @debounce(.5)
+    def _update_margins(self):
+        self._render_print_preview()
+        self._apply_all_print_preview_transforms()
+
     @_wrap_callback
     def _update_print_layout_callback(self, param_value, param_name):
         self.config_manager.update_print_setting(param_name, param_value)
-        self._apply_all_print_preview_transforms()
+
+        if param_name == 'margin_x' or param_name == 'margin_y':
+            self._update_margins()
+        else:
+            self._apply_all_print_preview_transforms()
 
     def _make_parameter_group(self, param_group: GeneratorParamGroup):
         for name, param in param_group.params.items():
@@ -568,6 +580,7 @@ class Gui:
             parent=Tags.PEN_CONFIG,
         ):
             dpg.add_table_column()
+            print(pen_map)
             for pen, pen_config in pen_map.items():
                 with dpg.table_row():
                     with dpg.table_cell():
@@ -582,11 +595,145 @@ class Gui:
     @_wrap_callback
     def _pen_replaced(self, app_data, user_data):
         dpg.configure_item(Tags.PEN_REPLACE_MODAL, show=False)
-        self.modal_visible = False
+        self.pen_replace_modal_visible = False
         self.printer.continue_print()
 
+    @_wrap_callback
+    def _update_selected_printer(self, app_data, user_data):
+        if app_data == 'None':
+            self.config_manager.set_current_printer(None)
+        else:
+            self.config_manager.set_current_printer(app_data)
+        # In either case, this may cause the current x/y resolution and margins to change,
+        # so we require a re-render. We also re-create the existing global printer here.
+        self._update_print_options_modal()
+        self.printer = self._get_printer()
+        self._render_print_preview()
+        # Need to update values in margin_x and margin_y sliders
+        self._make_margin_section()
+
+    @_wrap_callback
+    def _done_with_print_options(self, app_data, user_data):
+        dpg.configure_item(Tags.PRINT_OPTIONS_MODAL, show=False)
+
+    @_wrap_callback
+    def _update_serializer_settings(self, app_data, user_data):
+        if user_data == 'port':
+            val = app_data
+            if app_data == 'None':
+                val = None
+            self.config_manager.update_current_printer_connection_setting(user_data, val)
+        elif user_data == 'baud':
+            self.config_manager.update_current_printer_connection_setting(user_data, int(app_data))
+        elif user_data == 'bytesize':
+            self.config_manager.update_current_printer_connection_setting(user_data, int(app_data))
+        elif user_data == 'parity':
+            self.config_manager.update_current_printer_connection_setting(user_data, app_data)
+        elif user_data == 'stopbits':
+            self.config_manager.update_current_printer_connection_setting(user_data, app_data)
+        elif user_data == 'flow_control':
+            val = app_data
+            if app_data == 'None':
+                val = None
+            self.config_manager.update_current_printer_connection_setting(user_data, val)
+
+        self._update_print_options_modal()
+        self.printer = self._get_printer()
+
+    def _render_serializer_options_section(self, printer_config):
+        if not printer_config:
+            return
+
+        if printer_config['connection'] == 'serial':
+            dpg.add_text(default_value=f"port", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='port',
+                items=SerialSerializer.get_available_ports(),
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['port']
+            )
+
+            dpg.add_text(default_value=f"baud", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='baud',
+                items=[110, 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400],
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['baud']
+            )
+
+            dpg.add_text(default_value=f"bytesize", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='bytesize',
+                items=[5,6,7,8],
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['bytesize']
+            )
+
+            dpg.add_text(default_value=f"parity", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='parity',
+                items=['even', 'odd', 'none', 'mark', 'space'],
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['parity']
+            )
+
+            dpg.add_text(default_value=f"stopbits", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='stopbits',
+                items=['1', '1.5', '2'],
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['stopbits']
+            )
+
+            dpg.add_text(default_value=f"flow control", color=(204, 36, 29))
+            dpg.add_combo(
+                user_data='flowcontrol',
+                items=['None', 'xon/xoff'],
+                callback=self._update_serializer_settings,
+                default_value=printer_config['connection_defaults']['flowcontrol']
+            )
+        pass
+
+    def _update_print_options_modal(self):
+        available_printers = self.config_manager.get_all_printers()
+
+        available_printer_names = list(available_printers.keys())
+        available_printer_names.insert(0, 'None')
+
+        current_printer = self.config_manager.get_current_printer()
+        current_printer_name = current_printer['name'] if current_printer else None
+
+        dpg.delete_item(Tags.PRINT_OPTIONS_MODAL, children_only=True)
+        # Show dropdown of available printers.
+        dpg.add_combo(
+            parent=Tags.PRINT_OPTIONS_MODAL,
+            items=available_printer_names,
+            callback=self._update_selected_printer,
+            default_value=current_printer_name
+        )
+        with dpg.group(horizontal=True, parent=Tags.PRINT_OPTIONS_MODAL):
+            with dpg.group(horizontal=False):
+                # Printer details
+                if current_printer:
+                    dpg.add_text(default_value=f"Printer name: {current_printer_name}", color=(204, 36, 29))
+                    dpg.add_text(default_value=f"Type: {current_printer['serializer']}", color=(204, 36, 29))
+                    dpg.add_text(default_value=f"Serializer: {current_printer['connection']}", color=(204, 36, 29))
+                else:
+                    dpg.add_text(default_value=f"No printer selected!", color=(204, 36, 29))
+            with dpg.group(horizontal=False):
+                # Serializer details
+                self._render_serializer_options_section(current_printer)
+
+        dpg.add_button(
+            label="Done",
+            callback=self._done_with_print_options,
+            parent=Tags.PRINT_OPTIONS_MODAL,
+        )
+
+        dpg.configure_item(Tags.PRINT_OPTIONS_MODAL, show=True)
+
     def _update_pen_replace_modal(self):
-        self.modal_visible = True
+        self.pen_replace_modal_visible = True
         dpg.delete_item(Tags.PEN_REPLACE_MODAL, children_only=True)
         dpg.add_text(
             "Once plotting has paused, please replace pen",
@@ -701,6 +848,9 @@ class Gui:
                         max_value=print_settings["resolution_y"] / 2,
                         default_value=default_print_settings["translate_y"],
                     )
+            with dpg.table_row():
+                with dpg.table_cell(tag=Tags.MARGIN_SECTION):
+                    pass
             if self.program_mode == Modes.SVG:
                 with dpg.table_row():
                     with dpg.table_cell(tag=Tags.SVG_PRINT_OPTIONS):
@@ -742,7 +892,30 @@ class Gui:
                             callback=self._update_svg_layout_callback,
                             default_value=(self.svg_manager.current_page + 1)
                         )
+        self._make_margin_section()
 
+    def _make_margin_section(self):
+        print_settings = self.config_manager.get_print_settings()
+
+        dpg.delete_item(Tags.MARGIN_SECTION, children_only=True)
+        dpg.add_text(default_value="margin_x", color=(204, 36, 29), parent=Tags.MARGIN_SECTION)
+        dpg.add_slider_float(
+            user_data="margin_x",
+            callback=self._update_print_layout_callback,
+            min_value=0,
+            max_value=(print_settings["resolution_x"] / 2) - 1,
+            default_value=print_settings["margin_x"],
+            parent=Tags.MARGIN_SECTION
+        )
+        dpg.add_text(default_value="margin_y", color=(204, 36, 29), parent=Tags.MARGIN_SECTION)
+        dpg.add_slider_float(
+            user_data="margin_y",
+            callback=self._update_print_layout_callback,
+            min_value=0,
+            max_value=(print_settings["resolution_y"] / 2) - 1,
+            default_value=print_settings["margin_y"],
+            parent=Tags.MARGIN_SECTION
+        )
     @debounce(.5)
     def _rerender_title(self):
         self._render_titles()
@@ -907,11 +1080,20 @@ class Gui:
                 callback=self._print_callback,
                 tag=Tags.PRINT_BUTTON,
             )
+            dpg.add_button(
+                label="print options",
+                callback=self._print_options_callback,
+                tag=Tags.PRINT_OPTIONS_BUTTON,
+            )
         with dpg.tab_bar(parent = Tags.MIDDLE_PANEL):
             with dpg.tab(label="print preview", tag=Tags.PRINT_PREVIEW):
                 pass
 
         self._render_print_preview()
+
+    def _print_options_callback(self):
+        dpg.configure_item(Tags.PRINT_OPTIONS_MODAL, show=True)
+        self._update_print_options_modal()
 
     def _render_generator_mode(self):
         with dpg.collapsing_header(label="generators", parent=Tags.MODE_OPTIONS_PANEL):
@@ -926,11 +1108,15 @@ class Gui:
             # Allow user to choose parameters and generate
             self._make_parameter_items()
         with dpg.collapsing_header(label="i/o", parent=Tags.MODE_OPTIONS_PANEL):
-            # Set Serial port options
             dpg.add_button(
                 label="print",
                 callback=self._print_callback,
                 tag=Tags.PRINT_BUTTON,
+            )
+            dpg.add_button(
+                label="print options",
+                callback=self._print_options_callback,
+                tag=Tags.PRINT_OPTIONS_BUTTON,
             )
         with dpg.collapsing_header(label="print layout", parent=Tags.MODE_OPTIONS_PANEL):
             self._make_print_settings_section()
@@ -949,7 +1135,7 @@ class Gui:
         dpg.create_context()
         dpg.create_viewport(title="Custom Title")
         dpg.setup_dearpygui()
-        dpg.set_global_font_scale(1)
+        dpg.set_global_font_scale(1.5)
         with dpg.window(tag=Tags.WINDOW):
             with dpg.file_dialog(
                 show=False,
@@ -959,6 +1145,7 @@ class Gui:
                 tag=Tags.SELECT_SVG_FILE_DIALOG
             ):
                 dpg.add_file_extension(".svg")
+
             # Pop-up to confirm pen replacement
             with dpg.window(
                 label="Replace Pen",
@@ -968,6 +1155,18 @@ class Gui:
                 no_title_bar=True,
             ):
                 pass
+
+            # Pop-up for print options
+            with dpg.window(
+                label="Printer Configuration",
+                    width=1000,
+                    height=600,
+                modal=True,
+                show=False,
+                tag=Tags.PRINT_OPTIONS_MODAL
+            ):
+                pass
+
             with dpg.group(horizontal=True):
                 # Left pane
                 with dpg.child_window(width=LEFT_PANEL_WIDTH, autosize_y=True):
@@ -999,7 +1198,7 @@ class Gui:
         # Update render once on start to show empty canvas
         self.should_render = True
         while dpg.is_dearpygui_running():
-            if self.printer and self.printer.printing_needs_user_input and not self.modal_visible:
+            if self.printer and self.printer.printing_needs_user_input and not self.pen_replace_modal_visible:
                 self._update_pen_replace_modal()
 
             dpg.render_dearpygui_frame()
