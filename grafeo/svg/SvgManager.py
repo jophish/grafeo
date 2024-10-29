@@ -6,25 +6,36 @@ from ..models.atoms.Line import Line
 from ..models.atoms.Point import Point
 from ..models.Model import Model
 from ..pens.Pen import Pen
+from ..models.derived.Box import Box
+from .Barcode import BarcodeModelWriter
+from barcode import Code39
+from ..fonts.FontManager import FontManager
+from ..utils.scaling import scale_to_fit
 
 def make_registration_mark_model(size, bounding_box, height, width, duplicate_times):
     mark_model = Model()
     mark_model.add_line(Line(
         [
-            Point(size/2, size/4, Pen.One),
-            Point(size/2, size*3/4, Pen.One),
+            Point(size/2, 0, Pen.One),
+            Point(size/2, size, Pen.One),
         ],
         Pen.One
     ))
     mark_model.add_line(Line(
         [
-            Point(size/4, size/2, Pen.One),
-            Point(size*3/4, size/2, Pen.One),
+            Point(0, size/2, Pen.One),
+            Point(size, size/2, Pen.One),
         ],
         Pen.One
     ))
+
+    # The top left corner has an additional mark for orientation
     top_left = mark_model.copy()
+    top_left_box = Box(size/4, size/4, size/8, size*7.0/8.0, Pen.One)
+
+    top_left.add_model(top_left_box)
     top_left.translate(-size, height)
+
     top_right = mark_model.copy()
     top_right.translate(width, height)
     bottom_right = mark_model.copy()
@@ -116,6 +127,8 @@ class SvgManager():
         if page in self.page_map:
             return self.page_map[page]
 
+        font_manager = FontManager()
+
         models_per_page = self.num_rows * self.num_cols
         # TODO: IDK if we need this copy
         models = [svg.get_model().copy() for svg in self.svgs[models_per_page*page:models_per_page*(page+1)]]
@@ -129,17 +142,65 @@ class SvgManager():
                 # This may happen on the final page
                 if (index) < len(models):
                     current_model = models[index]
-              # TODO: Not adding registration marks results in bad spacing
-                if self._show_registration_marks or True:
-                    duplicate_times = 1
-                    if i == 0 and j == 0:
-                        duplicate_times = 2 # This is a hack to counteract pen dryness
-                    current_model = self._add_registration_marks(current_model, duplicate_times)
+
+                # Make the registration marks
+                current_model = self._add_registration_marks(current_model, 1)
                 bounding_box = current_model.get_bounding_box()
 
+                # Make the machine readable barcode
+                frame_num = page*models_per_page + (index+1)
+                code = f'W{int(self.width)}H{int(self.height)}F{frame_num}'
+                # IDEA: Generate 3 barcodes; one each for height, width, and frame number, and use different edges for each.
+                barcode = Code39(code, writer=BarcodeModelWriter(self.width, self._registration_mark_size, self.width, self.height))
+                barcode_model = barcode.render()
+                current_model.add_model(barcode_model)
+
+                # Make the human-readable metadata
+                code_rows = [[char] for char in code]
+                font_family = font_manager.get_font_family('SourceCodePro-Regular')
+                text_model = font_family.get_text_model(code_rows, None, None)
+                text_model_bounding_box = text_model.get_bounding_box()
+                text_model.translate(-text_model_bounding_box.min_x, -text_model_bounding_box.min_y)
+
+                # Scale the text so that the width fits within the margins, less some scaling factor
+                height_scale = .95
+                text_current_width = text_model_bounding_box.max_x - text_model_bounding_box.min_x
+                text_current_height = text_model_bounding_box.max_y - text_model_bounding_box.min_y
+                (scaled_x, scaled_y) = scale_to_fit(
+                    text_current_width, text_current_height,
+                    self._registration_mark_size*.5, self.height*height_scale,
+                )
+                text_scale_factor = scaled_x / text_current_width
+                text_model.apply_matrix([
+                    [text_scale_factor, 0],
+                    [0, text_scale_factor]
+                ])
+                # Translate the text such that the top left corner is near the bottom of the top left registration mark
+                text_model_bounding_box = text_model.get_bounding_box()
+                text_height = text_model_bounding_box.max_y - text_model_bounding_box.min_y
+                text_width = text_model_bounding_box.max_x - text_model_bounding_box.min_x
+                translate_text_x = -self._registration_mark_size + self._registration_mark_size/2 - text_width/2
+                translate_text_y = self.height*(height_scale + (1 - height_scale)/2) - text_height
+                #text_model.translate(-text_model_bounding_box.min_x, -text_model_bounding_box.min_y)
+                text_model.translate(-text_model_bounding_box.min_x + translate_text_x, -text_model_bounding_box.min_y + translate_text_y)
+                current_model.add_model(text_model)
+
+                # Make the margins
+                margin_size = self._registration_mark_size * .25
+                margin_box = Box(
+                    self.width+ self._registration_mark_size*2 + margin_size*2,
+                    self.height + self._registration_mark_size*2 + margin_size*2,
+                    bounding_box.min_x - margin_size,
+                    bounding_box.max_y + margin_size,
+                    Pen.One
+                )
+                current_model.add_model(margin_box, True)
+
+                
+                bounding_box = current_model.get_bounding_box()
                 current_model.translate(
-                    -bounding_box.min_x + j*(self.width+self._registration_mark_size*2),
-                    -bounding_box.min_y + (self.num_rows - 1 - i)*(self.height+self._registration_mark_size*2))
+                    -bounding_box.min_x + j*(self.width+self._registration_mark_size*2 + margin_size*2),
+                    -bounding_box.min_y + (self.num_rows - 1 - i)*(self.height+self._registration_mark_size*2 + margin_size*2))
 
                 page_model.add_model(current_model)
 

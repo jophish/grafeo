@@ -25,6 +25,7 @@ bezier = "^2024.6.20"
 svg-path = "^6.3"
 networkx = "^3.4.2"
 pyln = {git = "https://github.com/jophish/pyln.git"}
+python-barcode = "^0.15.1"
 
 
 [tool.poetry.group.dev.dependencies]
