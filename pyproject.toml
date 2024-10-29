@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "plotter"
+name = "grafeo"
 version = "0.1.0"
 description = ""
 authors = ["Joseph Bergeron <jophish126@gmail.com>"]
@@ -41,7 +41,7 @@ sphinx-autodoc-typehints = "^1.22"
 scalene = "^1.5.13"
 
 [tool.poetry.scripts]
-plotter = "poetry_scripts:plotter"
+grafeo = "poetry_scripts:grafeo"
 test = "poetry_scripts:test"
 format = "poetry_scripts:format_fix"
 format-check = "poetry_scripts:format_check"

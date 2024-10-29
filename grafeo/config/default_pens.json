@@ -1,0 +1,113 @@
+[
+  {
+    "descr": "Micron 005 Black",
+    "weight": 1,
+    "color": "#000000ff",
+    "location": 3,
+    "pause_to_replace": true,
+    "default": true
+  },
+  {
+    "descr": "Prismacolor PM-31 (Dark Green)",
+    "weight": 5,
+    "color": "#40b43780",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-4 (Crimson Red)",
+    "weight": 5,
+    "color": "#e1020780",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-19 (Canary Yellow)",
+    "weight": 5,
+    "color": "#f7f70380",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-15 (Yellow Orange)",
+    "weight": 5,
+    "color": "#fca80380",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-61 (Dark Umber)",
+    "weight": 5,
+    "color": "#39171680",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-8 (Pink)",
+    "weight": 5,
+    "color": "#ff70ff80",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-50 (Violet)",
+    "weight": 5,
+    "color": "#260ffc80",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-44 (Ultramarine)",
+    "weight": 5,
+    "color": "#3370fa80",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-32 (Parrot Green)",
+    "weight": 5,
+    "color": "#3fd78180",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-98 (Black)",
+    "weight": 5,
+    "color": "#06080880",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-6 (Carmine Red)",
+    "weight": 5,
+    "color": "#ff578c80",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Prismacolor PM-53 (Mulberry)",
+    "weight": 5,
+    "color": "#c40dff80",
+    "location": 3,
+    "pause_to_replace": true,
+    "load_directly": true
+  },
+  {
+    "descr": "Micron 005 Red",
+    "weight": 1,
+    "color": "#eb4034ff",
+    "location": 3,
+    "pause_to_replace": true
+  }
+]
