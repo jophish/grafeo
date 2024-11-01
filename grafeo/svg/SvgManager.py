@@ -7,7 +7,7 @@ from ..models.atoms.Point import Point
 from ..models.Model import Model
 from ..pens.Pen import Pen
 from ..models.derived.Box import Box
-from .Barcode import BarcodeModelWriter
+from .Barcode import BarcodeModelWriter2
 from barcode import Code39
 from ..fonts.FontManager import FontManager
 from ..utils.scaling import scale_to_fit
@@ -147,13 +147,45 @@ class SvgManager():
                 current_model = self._add_registration_marks(current_model, 1)
                 bounding_box = current_model.get_bounding_box()
 
-                # Make the machine readable barcode
+                # Make the machine readable barcodes
+                # We use three barcodes, one each for width, height, and frame number since a single barcode
+                # containing all these values ends up being too dense to be printed and decoded reliably.
                 frame_num = page*models_per_page + (index+1)
                 code = f'W{int(self.width)}H{int(self.height)}F{frame_num}'
-                # IDEA: Generate 3 barcodes; one each for height, width, and frame number, and use different edges for each.
-                barcode = Code39(code, writer=BarcodeModelWriter(self.width, self._registration_mark_size, self.width, self.height))
-                barcode_model = barcode.render()
-                current_model.add_model(barcode_model)
+
+                barcode_width_scale = .9
+                barcode_height_scale = .5
+
+                # Note that these barcodes contain a checksum at the end, which is the sum of all characters modulo 43
+                height_barcode = Code39(str(int(self.height)), writer=BarcodeModelWriter2(
+                    self.width*(1-barcode_width_scale)/2,
+                    self.height + self._registration_mark_size*(1 - barcode_height_scale)/2,
+                    self.width,
+                    self._registration_mark_size,
+                    0
+                ))
+                height_barcode_model = height_barcode.render()
+                current_model.add_model(height_barcode_model)
+
+                width_barcode = Code39(str(int(self.width)), writer=BarcodeModelWriter2(
+                    self.width*(1-barcode_width_scale)/2,
+                    -self._registration_mark_size + self._registration_mark_size*(1 - barcode_height_scale)/2,
+                    self.width,
+                    self._registration_mark_size,
+                    0
+                ))
+                width_barcode_model = width_barcode.render()
+                current_model.add_model(width_barcode_model)
+
+                frame_barcode = Code39(str(int(frame_num)), writer=BarcodeModelWriter2(
+                    self.width + self._registration_mark_size - self._registration_mark_size*(1-barcode_height_scale)/2,
+                    self.height*(1 - barcode_width_scale)/2,
+                    self.height,
+                    self._registration_mark_size,
+                    90
+                ))
+                frame_barcode_model = frame_barcode.render()
+                current_model.add_model(frame_barcode_model)
 
                 # Make the human-readable metadata
                 code_rows = [[char] for char in code]
@@ -163,7 +195,7 @@ class SvgManager():
                 text_model.translate(-text_model_bounding_box.min_x, -text_model_bounding_box.min_y)
 
                 # Scale the text so that the width fits within the margins, less some scaling factor
-                height_scale = .95
+                height_scale = .9
                 text_current_width = text_model_bounding_box.max_x - text_model_bounding_box.min_x
                 text_current_height = text_model_bounding_box.max_y - text_model_bounding_box.min_y
                 (scaled_x, scaled_y) = scale_to_fit(
@@ -181,7 +213,6 @@ class SvgManager():
                 text_width = text_model_bounding_box.max_x - text_model_bounding_box.min_x
                 translate_text_x = -self._registration_mark_size + self._registration_mark_size/2 - text_width/2
                 translate_text_y = self.height*(height_scale + (1 - height_scale)/2) - text_height
-                #text_model.translate(-text_model_bounding_box.min_x, -text_model_bounding_box.min_y)
                 text_model.translate(-text_model_bounding_box.min_x + translate_text_x, -text_model_bounding_box.min_y + translate_text_y)
                 current_model.add_model(text_model)
 
