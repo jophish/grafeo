@@ -17,11 +17,22 @@ class Polygon(Hatchable):
 
         """
         self._holes = holes if holes else []
+        self._poly_line = line
         self.pen = pen
         super().__init__(lines=[line] + self._holes)
 
     def copy(self):
-        return Polygon(self.lines[0].copy(), self.pen, [hole.copy() for hole in self._holes])
+        # Get all lines that are not the lines/holes defining the polygon
+        unique_lines = list(filter(lambda x: x != self._poly_line and x not in self._holes, self.lines))
+        new_model = Polygon(self._poly_line.copy(), self.pen, [hole.copy() for hole in self._holes])
+
+        for model in self.models:
+            new_model.add_model(model.copy())
+        for line in unique_lines:
+            new_model.add_line(line.copy())
+        for point in self.points:
+            new_model.add_point(point.copy())
+        return new_model
 
     def _make_shapely_geometry(self):
         line = self._lines[0]

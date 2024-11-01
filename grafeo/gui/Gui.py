@@ -81,7 +81,6 @@ class Gui:
             try:
                 return get_serializer(current_printer)
             except Exception as e:
-                print(e)
                 return None
         return None
 
@@ -580,7 +579,6 @@ class Gui:
             parent=Tags.PEN_CONFIG,
         ):
             dpg.add_table_column()
-            print(pen_map)
             for pen, pen_config in pen_map.items():
                 with dpg.table_row():
                     with dpg.table_cell():
